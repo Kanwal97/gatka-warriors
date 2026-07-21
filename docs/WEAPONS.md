@@ -102,7 +102,42 @@ row in `WEAPONS` draws and fights correctly without touching either.
 |---|---|---|---|:--:|---|
 | **Kirpan** | Virasat (Steel) | `curved_sabre` | no (cross-guard + disc pommel) | yes — the Dhal | `forward_heavy` |
 | **Soti** | Tournament | `straight` | yes — leather basket | yes — the Farri | `balanced` |
-| **Khanda** | Virasat (Steel) | `straight_broad` | no | yes | `forward_heavy` |
+| **Khanda** | Virasat (Steel) | `straight_broad` | no | **no — `twoHanded`** | `forward_heavy` |
+
+> **Sword+shield vs two-handed.** Sword+shield is *the* Gatka combination, so the
+> Kirpan carries the Dhal and the Soti the Farri. The **Khanda is clasped with
+> both hands** — it is a two-handed broadsword and carries **no shield**
+> (`twoHanded: true`; `Artist.drawWarrior` puts the off-hand on the hilt instead
+> of a Dhal). It was wrongly `hasShield: true`.
+
+### Motion signature (`motion`)
+
+The atthha (figure-eight) never stops: in a ready state the blade whirls
+continuously, and each weapon whirls at its own tempo with its own smear. This is
+the identity motion of Gatka and is now visible at rest, not just during a strike.
+
+| Weapon | `motion.whirl` (rad/s) | `motion.swing` | trail | reads as |
+|---|---:|---:|---|---|
+| **Soti** | 8.5 | 0.25 | thin, pale | quick, tight, snappy |
+| **Kirpan** | 6.0 | 0.35 | gold (Amrit-Dhāra) | fluid, wide, flowing |
+| **Khanda** | 3.8 | 0.50 | broad, cold steel | slow, heavy, committed |
+
+`Fighter.whirlPhase` advances at `motion.whirl` while IDLE/WALK/STEP and becomes
+the arm's pose target; `Fighter.weaponAngVel` (blade angular speed = whirl +
+strike spin) drives the smear, so both the ready-whirl and a live vaar leave a
+trail.
+
+**The whirl rides the nagara.** Real Gatka "rotates in smooth circles matching the
+drum's beat", so the whirl rate is modulated by the beat clock —
+`whirl · (1 + swing · cos(beatPhase·2π))` — surging as the beat lands and easing
+through the mid-beat. `swing` sets how hard it heaves: a light Soti patters evenly
+(0.25), a heavy Khanda heaves onto the beat then coasts (0.50). The mean rate stays
+`whirl` (cos integrates to zero), so each weapon keeps its identity tempo.
+
+**The smear is a dissipating comet.** The trail tapers alpha (squared falloff) and
+width toward its tail so it reads as motion-blur, not a flat ribbon; the hot vaar
+strands blend additively (`"lighter"`) so overlaps bloom. The strike ease also
+*ramps* into the pose across the active window (0.34 → 0.72) instead of snapping.
 
 - **`bladeStyle`** picks the art via the `Artist.drawWeapon` factory *and* shapes
   the hitbox: a `curved_sabre` cleaves, so its box gains `CURVE_SWEEP` (0.10 ×
