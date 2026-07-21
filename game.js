@@ -140,6 +140,10 @@ const WEAPONS = {
     weight: "forward_heavy",  // the belly of the arc carries the swing through
     art: { material: "#e5e4e2", hilt: "#ffd700" },
     bars: { damage: 0.62, range: 0.5, speed: 0.6 },
+    // MOTION SIGNATURE — how the blade rides the atthha between strikes. The
+    // Kirpan flows: a wide, continuous whirl with a gold Amrit-Dhāra smear.
+    // `swing` = how much the whirl surges on the nagara beat (0 = flat, ~0.5 = heavy).
+    motion: { whirl: 6.0, swing: 0.35, trailW: 3.0, trailCol: "255,214,140" },
   },
   soti: {
     id: "soti", name: "Soti", class: "Tournament",
@@ -159,6 +163,10 @@ const WEAPONS = {
     weight: "balanced",       // momentum lives in the wrists — snappy recovery
     art: { material: "#d2b48c", hilt: "#8b5a2b" },
     bars: { damage: 0.4, range: 0.92, speed: 0.78 },
+    // MOTION SIGNATURE — the stick is quick and tight: a fast, small whirl and a
+    // thin pale smear. The whole game of the Soti is tempo, and you should see it.
+    // Low `swing`: a light stick patters evenly, it does not heave on the beat.
+    motion: { whirl: 8.5, swing: 0.25, trailW: 2.4, trailCol: "224,214,180" },
   },
   khanda: {
     id: "khanda", name: "Khanda", class: "Virasat (Steel)",
@@ -171,10 +179,19 @@ const WEAPONS = {
     mobility: 0.8,    // the mass is the point; it can never quite re-aim
     bladeStyle: "straight_broad",
     hasBasketHilt: false,
-    hasShield: true,
+    // The Khanda is clasped with BOTH hands during play (it is a two-handed
+    // broadsword) — so it carries NO shield. `twoHanded` puts the off-hand on the
+    // hilt instead of drawing a Dhal. (Was `hasShield: true`, an authenticity
+    // error: sword+shield is the Kirpan/Soti pairing, not the Khanda.)
+    hasShield: false,
+    twoHanded: true,
     weight: "forward_heavy",  // rotational inertia — it cannot quickly re-aim
     art: { material: "#dfe7ef", hilt: "#e6b845" },
     bars: { damage: 0.96, range: 0.62, speed: 0.3 },
+    // MOTION SIGNATURE — slow, broad, heavy: a big committed whirl and a wide
+    // cold-steel smear. You feel the mass carry the arc through.
+    // High `swing`: the mass heaves hard onto the beat, then coasts through mid-beat.
+    motion: { whirl: 3.8, swing: 0.50, trailW: 4.2, trailCol: "200,214,235" },
   },
 };
 
@@ -320,6 +337,27 @@ const DODGE = Object.freeze({
 const PARRY_WINDOW = 0.13;
 
 const ROUNDS_TO_WIN = 2;   // best-of-3 => first to 2 round wins takes the match
+
+// ---- DIFFICULTY — the vairi grows fiercer each round you win -----------------
+// A climbing `Game.difficulty` LEVEL (starts at 1) steps up on every round the
+// player wins and CARRIES ACROSS MATCHES; it resets to 1 only on a match defeat or
+// a fresh start from the menu. The level maps to a 0..1 `skill` that the enemy AI
+// reads, plus small HP/damage bumps. THE WHOLE TABLE IS THE SINGLE SOURCE OF TRUTH
+// — and it is built so that LEVEL 1 (skill 0) reproduces EXACTLY the old shipped
+// numbers, so the ramp is additive on a known-good baseline, never a regression.
+// AI knobs are `[base, max]` pairs, interpolated by `skill` (see Enemy.think_ai).
+const DIFFICULTY = Object.freeze({
+  skillLevels: 6,                 // wins to reach full skill (skill=1 at level 7+)
+  hpPerLevel:  0.06, hpCap:  0.48, // +6% enemy HP per level, capped at +48%
+  dmgPerLevel: 0.05, dmgCap: 0.40, // +5% enemy damage per level, capped at +40%
+  guard:      [0.45, 0.80],       // chance to raise a guard on the player's windup
+  sidestep:   [0.32, 0.60],       // chance to Pentra side-step the read swing
+  vectorRead: [0.60, 0.95],       // chance to read the correct High/Low zone
+  ult:        [0.50, 0.85],       // chance to spend a full meter on the ultimate
+  attack:     [0.72, 0.90],       // chance to commit a vaar when in range
+  chakram:    [0.40, 0.65],       // chance to fling a Chakram fan from range
+  reactionCut: 0.35,              // reaction/think times shortened up to 35% at max
+});
 
 // ---- THE SANT-SIPAHI KIT ----------------------------------------------------
 // "Simran" is the focus/breath meter. It fills as you land and read attacks and
@@ -893,33 +931,75 @@ const Artist = {
     ctx.strokeStyle = f.colors.skin; ctx.lineWidth = h * 0.05;               // forearm
     ctx.beginPath(); ctx.moveTo(elbowX, elbowY); ctx.lineTo(handX, handY); ctx.stroke();
 
+    // OFF-HAND ON THE HILT — the Khanda is clasped with BOTH hands. The right arm
+    // reaches across to grip the hilt just inboard of the weapon hand, so the
+    // broadsword reads as the two-handed blade it is (no shield on this one).
+    if (f.weapon.twoHanded) {
+      const gripX = handX - (_dx / _d) * (h * 0.05);   // a hand's width down the hilt
+      const gripY = handY - (_dy / _d) * (h * 0.05);
+      const rShX = SW * 0.62, rShY = shoulderY;
+      const oElbowX = (rShX + gripX) / 2 + (_dy / _d) * (h * 0.05);   // elbow bows out
+      const oElbowY = (rShY + gripY) / 2 - (_dx / _d) * (h * 0.05);
+      ctx.strokeStyle = shade(f.colors.robe, 1.05); ctx.lineWidth = h * 0.058;  // sleeve
+      ctx.beginPath(); ctx.moveTo(rShX, rShY); ctx.lineTo(oElbowX, oElbowY); ctx.stroke();
+      ctx.strokeStyle = f.colors.skin; ctx.lineWidth = h * 0.046;               // forearm
+      ctx.beginPath(); ctx.moveTo(oElbowX, oElbowY); ctx.lineTo(gripX, gripY); ctx.stroke();
+    }
+
     Artist.drawWeapon(ctx, handX, handY, armAngle, f);
 
     // THE VAAR'S SMEAR — the trail the blade tip leaves through the atthha.
-    // This was literally ctx.arc(): a circle drawn round the shoulder. It now
-    // traces the SAME lemniscate the hand rides, at the tip's radius, so what you
-    // see is the eight the blade is genuinely travelling. Only the arc just
-    // travelled is drawn, so it reads as a trail and not as a permanent figure-8
-    // painted across the screen.
-    if (f.weaponMomentum !== undefined && Math.abs(f.weaponMomentum) > 0.28) {
-      const heat = clamp((Math.abs(f.weaponMomentum) - 0.28) / 0.55, 0, 1);
+    // It traces the SAME lemniscate the hand rides, at the tip's radius, so what
+    // you see is the eight the blade is genuinely travelling; only the arc just
+    // travelled is drawn, so it reads as a trail and not a painted figure-8.
+    //
+    // It is driven by the blade's ANGULAR SPEED (`weaponAngVel`), not by strike
+    // momentum alone — so the CONTINUOUS ready-whirl leaves a soft signature smear
+    // (the atthha you should always see) and a live strike layers a hot streak on
+    // top. Each weapon carries its own idle-smear colour/width (`motion`), so the
+    // three shastar read as three different motions even at rest.
+    const speed = Math.abs(f.weaponAngVel || 0);
+    if (speed > 0.012) {
+      const M = f.weapon.motion || { whirl: 5.5, trailW: 3, trailCol: "230,230,230" };
+      const whirlHeat  = clamp(speed / 0.16, 0, 1);           // the ready-whirl reads soft
+      const strikeHeat = clamp((speed - 0.22) / 0.40, 0, 1);  // a vaar layers on hot
+      const span = clamp(speed * 6, 0.5, 1.55);               // faster blade → longer streak
       const rr = armLen + f.weapon.reach * 0.72;
       const tipX = shoulderX + armLen * ATTHHA.cx;
-      const back = f.weaponMomentum > 0 ? -1 : 1;      // smear BEHIND the travel
+      const back = f.weaponAngVel > 0 ? -1 : 1;               // smear BEHIND the travel
+      // Sample the exact arc the tip just travelled, HEAD (tip, i=0) → TAIL.
+      const N = 24;
+      const pts = [];
+      for (let i = 0; i <= N; i++) {
+        const u = armAngle + back * (i / N) * span;
+        pts.push([tipX + Math.cos(u) * rr * ATTHHA.w,
+                  shoulderY + Math.sin(u) * Math.cos(u) * rr * ATTHHA.h]);
+      }
+      // [lineWidth, "r,g,b", baseAlpha, heat, additive] — the soft idle-whirl
+      // strand first, then the two hot vaar strands that light up on a fast strike.
+      const strands = [
+        [M.trailW, M.trailCol, 0.34, whirlHeat, false],
+        [5.0, "255,157,46", 0.50, strikeHeat, true],
+        [1.8, "255,244,214", 0.85, strikeHeat, true],
+      ];
       ctx.save();
       ctx.lineCap = "round"; ctx.lineJoin = "round";
-      for (const [lw, col, al] of [[5, "rgba(255,157,46,0.5)", 0.55],
-                                   [1.8, "rgba(255,244,214,0.85)", 0.8]]) {
-        ctx.globalAlpha = al * heat;
-        ctx.strokeStyle = col; ctx.lineWidth = lw;
-        ctx.beginPath();
-        for (let i = 0; i <= 22; i++) {
-          const u = armAngle + back * (i / 22) * 1.45;
-          const px = tipX + Math.cos(u) * rr * ATTHHA.w;
-          const py = shoulderY + Math.sin(u) * Math.cos(u) * rr * ATTHHA.h;
-          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      for (const [lw, rgb, al, heat, add] of strands) {
+        if (heat <= 0) continue;
+        // A DISSIPATING COMET, not a flat ribbon: every segment fades and narrows
+        // toward the tail, so the smear trails off like real motion-blur. The hot
+        // vaar strands blend additively so overlaps bloom (light), never muddy.
+        ctx.globalCompositeOperation = add ? "lighter" : "source-over";
+        ctx.strokeStyle = "rgba(" + rgb + ",1)";
+        for (let i = 0; i < N; i++) {
+          const k = 1 - i / N;                     // 1 at the tip (head) → 0 at the tail
+          ctx.globalAlpha = al * heat * k * k;     // squared fade: concentrated at the head
+          ctx.lineWidth = lw * (0.30 + 0.70 * k);  // taper thin toward the tail
+          ctx.beginPath();
+          ctx.moveTo(pts[i][0], pts[i][1]);
+          ctx.lineTo(pts[i + 1][0], pts[i + 1][1]);
+          ctx.stroke();
         }
-        ctx.stroke();
       }
       ctx.restore();
     }
@@ -1523,8 +1603,15 @@ class Fighter {
     this.speed   = BASE_SPEED * (this.weapon.mobility || 1);
 
     this.hp      = 100; this.maxHp   = 100;   // HEALTH
+    this.baseMaxHp = 100;                     // pre-difficulty HP (scaling never compounds)
     this.posture = 100; this.maxPost = 100;   // POSTURE (guard integrity)
     this.simran  = 0;   this.maxSimran = SIMRAN_MAX; // ability RESOURCE
+
+    // DIFFICULTY hooks — defaults are the neutral Level-1 values, so the PLAYER
+    // (who is never scaled) behaves exactly as before. Enemy.applyDifficulty()
+    // raises these; `dmgScale` multiplies outgoing damage, `skill` (0..1) drives AI.
+    this.dmgScale = 1;
+    this.skill = 0;
 
     this.action = ACT.IDLE;
     this.vector = VECTOR.MID;
@@ -1576,6 +1663,13 @@ class Fighter {
     // physical value that carries spin and eases toward pose targets.
     this.weaponAngle = -0.35;
     this.weaponMomentum = 0;
+    // THE ATTHHA NEVER STOPS. `whirlPhase` advances continuously while the
+    // warrior is in a ready state, so the blade genuinely travels the figure-eight
+    // between strikes — the identity motion of Gatka, not a frozen guard pose.
+    // `weaponAngVel` is the blade's per-step angular speed (whirl + strike spin),
+    // and it drives the visible smear so the whole motion reads.
+    this.whirlPhase = -0.35;
+    this.weaponAngVel = 0;
 
     // Vertical physics (jumping Pentra)
     this.vy = 0;
@@ -1825,6 +1919,31 @@ class Fighter {
     // Friction bleeds spin; the Chakkar (multi-hit) sustains a whirl; then the
     // angle elastically re-centers toward the current pose target (a Lerp, so it
     // never snaps). This is what makes strike→spin→step read as one motion.
+    //
+    // THE ATTHHA NEVER STOPS. In a ready state the blade is not parked at a pose —
+    // it whirls the figure-eight continuously (real Gatka is unbroken circular
+    // motion). `whirlPhase` advances at the weapon's own tempo and becomes the
+    // pose target, so IDLE/WALK/STEP are a live whirl instead of a ±0.06 twitch.
+    const prevAngle = this.weaponAngle;
+    const ready = this.action === ACT.IDLE || this.action === ACT.WALK || this.action === ACT.STEP;
+    if (ready) {
+      const m = this.weapon.motion || {};
+      const whirl = m.whirl || 5.5;
+      const swing = (m.swing != null ? m.swing : 0.35);
+      // THE WHIRL RIDES THE NAGARA. Real Gatka rotates "in smooth circles matching
+      // the drum's beat": the blade surges as the beat lands and eases through the
+      // mid-beat, so the atthha breathes with the rhythm instead of grinding at a
+      // dead constant rate. The mean rate stays `whirl` (the weapon's identity
+      // tempo — cos integrates to zero over the cycle); only the phase swings.
+      const rate = whirl * (1 + swing * Math.cos(this.beatPhase * Math.PI * 2));
+      this.whirlPhase += rate * dt;
+      if (this.whirlPhase >  Math.PI) this.whirlPhase -= Math.PI * 2;
+      else if (this.whirlPhase < -Math.PI) this.whirlPhase += Math.PI * 2;
+    } else {
+      // Keep the phase glued to the live angle so the whirl resumes seamlessly
+      // (no backwards snap) the instant the warrior returns to a ready state.
+      this.whirlPhase = this.weaponAngle;
+    }
     const target = this._targetArmAngle();
     this.weaponMomentum *= WEIGHT_FRICTION[this.weapon.weight] || 0.94;
     if (this.action === ACT.ATTACK && this.attackPhase === "active" &&
@@ -1832,12 +1951,31 @@ class Fighter {
       this.weaponMomentum += 0.16;   // Chakkar keeps spinning while active
     }
     this.weaponAngle += this.weaponMomentum;
-    // Snap harder to the strike pose during the ACTIVE frames so the visible
-    // blade lines up with the live hitbox (fixes "it doesn't look like it hit").
-    // Snap hard onto the strike pose during ACTIVE — a hero's blade arrives, it
-    // does not drift into place.
-    const center = (this.action === ACT.ATTACK && this.attackPhase === "active") ? 0.64 : 0.18;
-    this.weaponAngle += (target - this.weaponAngle) * center;
+    // Ease toward the strike pose during ACTIVE frames so the visible blade lines
+    // up with the live hitbox — but ARRIVE, don't pop. The ease ramps across the
+    // active window (0.34 → 0.72) so the blade sweeps smoothly into the pose and
+    // only locks on hard at the end of the active frames, killing the old snap.
+    let center = 0.18;
+    if (this.action === ACT.ATTACK && this.attackPhase === "active") {
+      const m = this.curMove || this.weapon;
+      const p = m.active ? clamp(this.phaseT / m.active, 0, 1) : 1;
+      center = lerp(0.34, 0.72, p);
+    }
+    // Ease toward the target the SHORT way around the circle, so a whirlPhase that
+    // wrapped past ±π never drags the blade the long way back through the eight.
+    let diff = target - this.weaponAngle;
+    while (diff >  Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    this.weaponAngle += diff * center;
+    // Keep the angle bounded so a strike out of a whirl always settles quickly.
+    if (this.weaponAngle >  Math.PI) this.weaponAngle -= Math.PI * 2;
+    else if (this.weaponAngle < -Math.PI) this.weaponAngle += Math.PI * 2;
+    // Blade angular speed this step (whirl + strike spin), shortest-arc — drives
+    // the visible smear so BOTH the idle whirl and a live strike leave a trail.
+    let av = this.weaponAngle - prevAngle;
+    while (av >  Math.PI) av -= Math.PI * 2;
+    while (av < -Math.PI) av += Math.PI * 2;
+    this.weaponAngVel = av;
   }
 
   /** The pose the weapon arm eases toward, per action/phase. */
@@ -1862,8 +2000,10 @@ class Fighter {
         if (this.attackPhase === "windup") return this.vector === VECTOR.HIGH ? 0.4 : -1.0; // pull back
         return strike;
       }
-      default: // IDLE / WALK — a gentle Pentra sway; the weapon is never dead-still.
-        return -0.35 + Math.sin(this.animT * 3) * 0.06;
+      default: // IDLE / WALK / STEP — the blade rides the atthha continuously.
+        // The pose target IS the advancing whirl phase, so the weapon travels the
+        // whole figure-eight rather than twitching around a parked rest angle.
+        return this.whirlPhase;
     }
   }
 
@@ -1930,8 +2070,12 @@ class Fighter {
     const covers = g.covers || [];
     const correctZone = guarding && covers.indexOf(hitbox.vector) !== -1;
 
-    // 1) Super-armor guard (Santulan): absorbs any zone at low chip; immune to break.
-    if (guarding && gflags.superArmor) {
+    // 1) Super-armor guard (Santulan): absorbs any zone at low chip; immune to
+    //    break. But an UNBLOCKABLE vaar (the spinning Chakkar) is unblockable
+    //    against EVERY guard — even this one — or the whole "a step is its only
+    //    answer" premise collapses. So the super-armor branch yields to it and the
+    //    Chakkar falls through to the clean-hit path below.
+    if (guarding && gflags.superArmor && !flags.unblockable) {
       this.posture = clamp(this.posture - bal * 0.4 * balMult, 0, this.maxPost);
       this.gainSimran(SIMRAN_GAIN.gotBlock);
       if (this.posture <= 0) this._stagger();
@@ -1949,7 +2093,7 @@ class Fighter {
     }
     // 3) Guard-break: a heavy move (Purba) crushes a held, non-parry block.
     if (flags.guardBreak && correctZone) {
-      this.hp = clamp(this.hp - dmg * 0.5 * dmgMult, 0, this.maxHp);
+      this.hp = clamp(this.hp - dmg * 0.5 * dmgMult * (attacker.dmgScale || 1), 0, this.maxHp);
       this.flash = 0.14;
       attacker.gainSimran(SIMRAN_GAIN.hit);
       this.breakFlow();   // getting your guard crushed drops FLOW
@@ -1974,7 +2118,7 @@ class Fighter {
     const counter = attacker.counterT > 0 ? DODGE.counterDmg : 1;
     attacker.counterT = 0;                     // the window is spent on this blow
     this.breakFlow();
-    this.hp = clamp(this.hp - dmg * dmgMult * punish * flowMult * counter, 0, this.maxHp);
+    this.hp = clamp(this.hp - dmg * dmgMult * punish * flowMult * counter * (attacker.dmgScale || 1), 0, this.maxHp);
     this.posture = clamp(this.posture - bal * 0.5 * (2 - this.defenseMult) * balMult, 0, this.maxPost);
     this.flash = 0.12;
     attacker.gainSimran(SIMRAN_GAIN.hit);
@@ -1999,6 +2143,11 @@ class Fighter {
     }
     if (this.shieldT > 0) {
       this.shieldT = 0;
+      // Sarbloh Kavach turns the disc back on its thrower — the melee reflect
+      // drains the attacker's posture, and so must this (before, a reflected
+      // Chakram just vanished and cost the thrower nothing).
+      proj.owner.posture = clamp(proj.owner.posture - 20, 0, proj.owner.maxPost);
+      if (proj.owner.posture <= 0) proj.owner._stagger();
       this.gainSimran(SIMRAN_GAIN.reflect);
       return "reflect";
     }
@@ -2021,10 +2170,23 @@ class Fighter {
       if (this.posture <= 0) this._stagger();
       return "block";
     }
-    this.hp = clamp(this.hp - CHAKRAM.damage, 0, this.maxHp);
+    // Clean disc hit — it must actually INTERRUPT, like the melee clean-hit does:
+    // chip posture, knock back, drop FLOW and stun. Before, the disc dealt damage
+    // but left the target in IDLE — a free chip with no hitstun, so it never felt
+    // like it landed.
+    this.hp = clamp(this.hp - CHAKRAM.damage * (proj.owner.dmgScale || 1), 0, this.maxHp);
+    this.posture = clamp(this.posture - CHAKRAM.postureDmg * 0.5, 0, this.maxPost);
     this.flash = 0.1;
     proj.owner.gainSimran(SIMRAN_GAIN.chakram);
-    if (this.hp <= 0) this.action = ACT.KO;
+    this.breakFlow();
+    this.x = clamp(this.x + proj.owner.facing * 12, 40, CANVAS_W - 40);
+    if (this.hp <= 0) { this.action = ACT.KO; }
+    // Heavy-weapon super-armor plows through the disc mid-swing, matching melee.
+    else if (this.action === ACT.ATTACK && this.weapon.superArmor && this.attackPhase === "active") {
+      // keep swinging
+    } else {
+      this.action = ACT.HURT; this.hurtT = 0.24;
+    }
     return "hit";
   }
 
@@ -2064,6 +2226,7 @@ class Fighter {
     this.prevX = this.x; this.stillTime = 0; this.defenseMult = 1;
     this.flow = 0; this.flowT = 0;
     this.weaponAngle = -0.35; this.weaponMomentum = 0;
+    this.whirlPhase = -0.35; this.weaponAngVel = 0;
   }
 
   /* ----- rendering ------------------------------------------------------ */
@@ -2232,6 +2395,19 @@ class Enemy extends Fighter {
     this.plan = "approach";
   }
 
+  /**
+   * Set this vairi's difficulty from the match LEVEL. `skill` (0..1) sharpens the
+   * AI in think_ai; `dmgScale` and `maxHp` give small stat bumps. Built so LEVEL 1
+   * is skill 0 / dmgScale 1 / maxHp = baseMaxHp — i.e. exactly the old enemy.
+   */
+  applyDifficulty(level) {
+    const D = DIFFICULTY;
+    this.skill = clamp((level - 1) / D.skillLevels, 0, 1);
+    this.dmgScale = 1 + Math.min(D.dmgCap, D.dmgPerLevel * (level - 1));
+    this.maxHp = this.baseMaxHp * (1 + Math.min(D.hpCap, D.hpPerLevel * (level - 1)));
+    this.hp = this.maxHp;
+  }
+
   think_ai(dt, player) {
     if (this.action === ACT.KO || this.action === ACT.HURT || this.action === ACT.STEP ||
         this.action === ACT.CAST || this.action === ACT.STAGGER || this.ultActive) return;
@@ -2240,6 +2416,12 @@ class Enemy extends Fighter {
     const inRange = gap <= this.weapon.reach + this.width * 0.5;
     this.think -= dt;
 
+    // DIFFICULTY: `s` (0..1) interpolates every reaction chance from its baseline to
+    // its ceiling, and `react` shortens the commit/idle timers so a higher level
+    // reads and answers faster. At s=0 (Level 1) all of this is the old behaviour.
+    const D = DIFFICULTY, s = this.skill;
+    const react = 1 - D.reactionCut * s;
+
     // Panic-shield if the player is unloading their ultimate nearby.
     if (player.ultActive && gap < ULT.radius && this.shieldT <= 0 &&
         this.simran >= ABILITY.shield.cost) {
@@ -2247,7 +2429,7 @@ class Enemy extends Fighter {
     }
 
     // Spend a full meter on the ultimate when reasonably close.
-    if (this.simran >= ABILITY.ultimate.cost && gap < 220 && Math.random() < 0.5) {
+    if (this.simran >= ABILITY.ultimate.cost && gap < 220 && Math.random() < lerp(D.ult[0], D.ult[1], s)) {
       this.castUltimate();
       return;
     }
@@ -2255,13 +2437,13 @@ class Enemy extends Fighter {
     // Read the swing and SIDE-STEP it — the art's preferred answer, so the AI
     // reaches for it before it reaches for a guard.
     if (player.action === ACT.ATTACK && player.attackPhase === "windup" &&
-        gap < 155 && Math.random() < 0.32 && this.startDodge(0)) return;
+        gap < 155 && Math.random() < lerp(D.sidestep[0], D.sidestep[1], s) && this.startDodge(0)) return;
 
     // React to the player's swing: guard sometimes (not always — let hits land).
     if (player.action === ACT.ATTACK && player.attackPhase === "windup" &&
-        gap < 140 && Math.random() < 0.45) {
+        gap < 140 && Math.random() < lerp(D.guard[0], D.guard[1], s)) {
       const M = MOVES[this.weapon.id];
-      const readHigh = (Math.random() < 0.6 ? player.vector : (player.vector + 1) % 3) === VECTOR.HIGH;
+      const readHigh = (Math.random() < lerp(D.vectorRead[0], D.vectorRead[1], s) ? player.vector : (player.vector + 1) % 3) === VECTOR.HIGH;
       this.startBlock(readHigh && M.guardUp ? M.guardUp : M.guard);
       return;
     } else if (this.action === ACT.BLOCK) {
@@ -2278,21 +2460,21 @@ class Enemy extends Fighter {
 
     // Pick a new plan.
     if (inRange) {
-      if (Math.random() < 0.72) {
+      if (Math.random() < lerp(D.attack[0], D.attack[1], s)) {
         const M = MOVES[this.weapon.id];
         const slots = [M.jUp, M.jMid, M.jDown].filter(Boolean);
         this.startAttack(slots[Math.floor(rand(0, slots.length))]);
-        this.think = rand(0.35, 0.7);
-      } else { this.plan = "retreat"; this.think = rand(0.25, 0.5); }
+        this.think = rand(0.35, 0.7) * react;
+      } else { this.plan = "retreat"; this.think = rand(0.25, 0.5) * react; }
     } else {
       // From range, sometimes fling a Chakram fan instead of just walking in.
       if (gap > this.weapon.reach + 80 && this.simran >= ABILITY.chakram.cost &&
-          Math.random() < 0.4) {
+          Math.random() < lerp(D.chakram[0], D.chakram[1], s)) {
         this.castChakram();
-        this.think = rand(0.4, 0.8);
+        this.think = rand(0.4, 0.8) * react;
       } else {
         this.plan = "approach";
-        this.think = rand(0.2, 0.45);
+        this.think = rand(0.2, 0.45) * react;
       }
     }
   }
@@ -2389,6 +2571,9 @@ const HUD = {
       HUD._pip(ctx, cx - 26 - i * 18, cy, i < game.playerWins);
       HUD._pip(ctx, cx + 26 + i * 18, cy, i < game.enemyWins);
     }
+    // The climbing difficulty LEVEL — the vairi's ferocity, below the round pips.
+    ctx.fillStyle = "#ff9d2e"; ctx.font = "11px Cinzel, serif";
+    ctx.fillText("◆ LEVEL " + game.difficulty, cx, 54);
     ctx.textAlign = "left";
   },
 
@@ -2749,6 +2934,7 @@ class Game {
     this.roundNumber = 1;
     this.playerWins = 0;
     this.enemyWins = 0;
+    this.difficulty = 1;   // climbs each round the player wins; carries across matches
 
     this.player = null;
     this.enemy = null;
@@ -2886,9 +3072,9 @@ class Game {
         this._transition(STATE.CHARACTER_SELECT);
         this._drawSelectPortrait(); this._renderShastarSpec();
         break;
-      case "start-match": this._startMatch(); break;
+      case "start-match": this._startMatch(true);  break;   // fresh run — reset the climb
       case "resume":      this._pause(false); break;
-      case "rematch":     this._startMatch(); break;
+      case "rematch":     this._startMatch(false); break;   // keep the difficulty level
       case "to-menu":     this._transition(STATE.MAIN_MENU); break;
     }
   }
@@ -3193,7 +3379,12 @@ class Game {
 
   /* ---- MATCH / ROUND LIFECYCLE ---------------------------------------- */
 
-  _startMatch() {
+  _startMatch(fresh) {
+    // A FRESH run (from the menu / weapon select) resets the difficulty climb to 1.
+    // A rematch (fresh === false) KEEPS the level, so it carries across matches:
+    // a match win rolls straight into a harder rematch; a defeat already reset it
+    // to 1 in _endRound. Called with no arg (e.g. tests) counts as fresh.
+    if (fresh !== false) this.difficulty = 1;
     this.roundNumber = 1; this.playerWins = 0; this.enemyWins = 0;
     this._spawnFighters();
     this._transition(STATE.GAMEPLAY);
@@ -3201,9 +3392,13 @@ class Game {
 
   _spawnFighters() {
     const pWeapon = WEAPONS[this.playerWeaponId];
-    // Enemy takes a different weapon for variety (cycles to the next one).
+    // Enemy weapon is drawn at RANDOM so every one of the nine matchups can occur,
+    // MIRRORS INCLUDED. (It used to be "the next weapon in the table", which is
+    // exactly one side of the §5.2 counter triangle for each pick — so the player
+    // always got the same fixed, favourable pairing and six of nine matchups,
+    // including all mirrors, were unreachable.)
     const ids = Object.keys(WEAPONS);
-    const eId = ids[(ids.indexOf(this.playerWeaponId) + 1) % ids.length];
+    const eId = ids[Math.floor(rand(0, ids.length))];
 
     this.player = new Player({
       name: "Akaal", weapon: pWeapon, facing: 1, x: 250, colors: AKAAL_COLORS,
@@ -3213,6 +3408,7 @@ class Game {
       colors: { robe: "#6d2b2b", cloth: "#451919", sash: "#d9c27a", hajooria: "#caa24a",
                 turban: "#3a3f4a", skin: "#b87a44", beard: "#1a1206" },
     });
+    this.enemy.applyDifficulty(this.difficulty);   // scale the vairi to the current level
     this.particles.clear();
     this.projectiles.length = 0;
     this.floaters.length = 0; this.bolts.length = 0; this.boltFlash = 0; this.shake = 0;
@@ -3222,6 +3418,7 @@ class Game {
     this.roundNumber++;
     this.player.resetForRound(250, 1);
     this.enemy.resetForRound(650, -1);
+    this.enemy.applyDifficulty(this.difficulty);   // the level may have climbed a win
     this.particles.clear();
     this.projectiles.length = 0;
     this.floaters.length = 0; this.bolts.length = 0; this.boltFlash = 0; this.shake = 0;
@@ -3229,19 +3426,27 @@ class Game {
   }
 
   _endRound(playerWon) {
-    if (playerWon) this.playerWins++; else this.enemyWins++;
+    // WIN A ROUND → the vairi hardens for the next one (this also applies to the
+    // match-deciding round, so a match win rolls into a fiercer rematch).
+    if (playerWon) { this.playerWins++; this.difficulty++; }
+    else this.enemyWins++;
 
     if (this.playerWins >= ROUNDS_TO_WIN || this.enemyWins >= ROUNDS_TO_WIN) {
       const win = this.playerWins >= ROUNDS_TO_WIN;
+      // You FELL → the climb resets to 1. You WON → the level is kept, so the
+      // rematch (which does not reset it) begins harder than the match you just won.
+      if (!win) this.difficulty = 1;
       this.dom.overTitle.textContent = win ? "FATEH!" : "DEFEAT";
       this.dom.overSub.textContent = win
-        ? "Waheguru Ji Ki Fateh — the match is yours."
+        ? "Waheguru Ji Ki Fateh — the match is yours. The rematch awaits at Level " + this.difficulty + "."
         : "You have fallen. Rise and fight again.";
       this._transition(STATE.GAME_OVER);
       return;
     }
     this.dom.roundTitle.textContent = playerWon ? "ROUND WON" : "ROUND LOST";
-    this.dom.roundSub.textContent = playerWon ? "Chardi Kala!" : "Steady yourself…";
+    this.dom.roundSub.textContent = playerWon
+      ? "Chardi Kala! The vairi grows fiercer — Level " + this.difficulty + "."
+      : "Steady yourself…";
     this.bannerT = 2.2;
     this._transition(STATE.ROUND_OVER);
   }

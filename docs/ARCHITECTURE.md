@@ -77,6 +77,22 @@ unblockable AoE crush.
 on landing a hit (0.2); read by `Artist.drawKirpan` to drive its emissive
 states. See [WEAPONS.md](WEAPONS.md).
 
+## Escalating difficulty (`Game.difficulty`)
+
+A match is best-of-3 (`ROUNDS_TO_WIN = 2`), but difficulty **climbs across matches**:
+
+- `Game.difficulty` starts at 1 and **increments each round the player wins**
+  (`_endRound`). A **match defeat resets it to 1**; a **match win keeps it**, so the
+  rematch begins harder (`_startMatch(fresh)` — `start-match` passes `true` and
+  resets; `rematch` passes `false` and persists).
+- The level → a 0..1 `skill` plus small HP/damage bumps, applied to the enemy by
+  `Enemy.applyDifficulty(level)` at spawn and each `_startNextRound`. The **single
+  source of truth is the `DIFFICULTY` table**; its AI knobs are `[base, max]` pairs
+  interpolated by `skill` in `Enemy.think_ai`, and **`skill = 0` at Level 1 is
+  exactly the pre-difficulty behaviour** (no regression). Outgoing damage scales by
+  `Fighter.dmgScale` (player stays 1); `baseMaxHp` keeps HP scaling from compounding.
+- HUD shows `◆ LEVEL n`; the round-won banner announces the rise.
+
 ## Fixed-timestep loop
 
 `Game._frame(now)`:
