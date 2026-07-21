@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gatka Warriors</title>
+
+<!-- Traditional-styled display font for banners/titles. Falls back gracefully offline. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Marcellus&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  /* ============================================================
+     GLOBAL / LAYOUT
+     ============================================================ */
+  :root {
+    --bg-0:        #120b06;   /* deepest background */
+    --bg-1:        #241407;   /* panel background   */
+    --saffron:     #ff9d2e;   /* Sikh saffron accent */
+    --saffron-dim: #b46a15;
+    --gold:        #ffd479;
+    --steel:       #cdd6e0;
+    --blood:       #c0392b;
+    --ink:         #f4e9d6;   /* parchment text     */
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: radial-gradient(circle at 50% 30%, #2a1809 0%, var(--bg-0) 70%);
+    color: var(--ink);
+    font-family: "Marcellus", Georgia, serif;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Stage wraps the canvas AND the HTML overlays so they share a coordinate box.
+     Sized by whichever runs out first: a sane maximum, the viewport width, or the
+     viewport HEIGHT (× the 1.8 aspect) so a short window never clips the frame.
+     The canvas re-renders at this size × devicePixelRatio — see Game._resize —
+     so growing the frame costs no sharpness. */
+  #stage {
+    position: relative;
+    width: min(1280px, 96vw, calc((100vh - 44px) * 1.8));
+    margin: 18px auto;
+    box-shadow: 0 0 0 3px var(--saffron-dim), 0 18px 60px rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  /* The canvas keeps its 900x500 internal resolution (the width/height attrs) —
+     all game maths stays in those units — while CSS scales it to fit. Without
+     this a 900px canvas simply overflows any phone. */
+  canvas#game {
+    display: block;
+    width: 100%;
+    aspect-ratio: 900 / 500;
+    background: #0d0803;
+    image-rendering: auto;
+  }
+
+  /* Corner toggles — z-index above the overlays (10) and the touch pad (20), so
+     they stay reachable on every screen. */
+  .hud-btn {
+    position: absolute; top: 10px; z-index: 30;
+    width: 34px; height: 34px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; line-height: 1; cursor: pointer;
+    background: rgba(20, 12, 5, 0.55); border: 1.5px solid var(--saffron-dim);
+    color: var(--gold); backdrop-filter: blur(2px);
+    transition: border-color 0.12s ease, opacity 0.12s ease, background 0.12s ease;
+    opacity: 0.6;
+  }
+  .hud-btn:hover, .hud-btn:focus-visible { opacity: 1; border-color: var(--gold); }
+  .hud-btn.on {
+    opacity: 1; border-color: var(--gold); background: rgba(255, 157, 46, 0.35);
+  }
+  #mute        { right: 12px; }
+  #tpad-toggle { right: 52px; }
+  #pause-btn   { right: 92px; }
+  .hud-btn.hidden { display: none; }
+
+  /* PAUSE + GUIDE share one rule: everything is pinned EXCEPT the guide, which
+     takes exactly the space left over and scrolls inside itself. So RESUME and
+     BACK can never be pushed off the bottom, whatever the frame size, and the
+     guide never gets clipped without a way to reach the rest.
+     (`max-height: 46vh` was wrong here — vh is the VIEWPORT, not the stage.) */
+  #menu-pause, #menu-guide { gap: 12px; padding: 16px 26px; }
+  #menu-pause > *, #menu-guide > * { flex: 0 0 auto; }
+  #menu-pause .keymap, #menu-guide .guide-body-wrap {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    width: 100%; padding-right: 10px;
+    scrollbar-width: thin; scrollbar-color: var(--saffron-dim) transparent;
+  }
+  #menu-pause .keymap::-webkit-scrollbar,
+  #menu-guide .guide-body-wrap::-webkit-scrollbar { width: 6px; }
+  #menu-pause .keymap::-webkit-scrollbar-thumb,
+  #menu-guide .guide-body-wrap::-webkit-scrollbar-thumb {
+    background: var(--saffron-dim); border-radius: 3px;
+  }
+  .pause-title { font-size: 34px; }
+  .guide-title { font-size: 30px; letter-spacing: 3px; }
+  #menu-pause .keymap { max-width: 720px; }
+  /* Two side-by-side columns when the frame is wide enough: keys on the left,
+     the rules beside them. Collapses to one column when it is not. */
+  .guide-body-wrap {
+    display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 8px 34px; align-items: start; max-width: 1100px;
+  }
+  @media (max-width: 900px) { .guide-body-wrap { grid-template-columns: 1fr; } }
+  #menu-guide .rules { margin-top: 0; }
+  .btn-sm { font-size: 13px; padding: 8px 20px; }
+
+  /* ============================================================
+     CONTROL GUIDE — generated from KEYS in game.js (_buildControlGuide)
+     ------------------------------------------------------------
+     A three-column grid: KEY | WHAT IT IS | WHAT IT IS FOR. It replaced a
+     prose blob where the keys were buried mid-sentence and you had to read a
+     paragraph to learn that J strikes.
+     ============================================================ */
+  .keymap {
+    display: grid;
+    grid-template-columns: max-content max-content 1fr;
+    gap: 4px 12px;
+    align-items: baseline;
+    text-align: left;
+  }
+  .keymap .grp {
+    grid-column: 1 / -1;
+    font-family: "Cinzel", serif; font-size: 9px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--saffron); opacity: 0.85;
+    margin: 10px 0 2px; padding-bottom: 3px;
+    border-bottom: 1px solid rgba(180, 106, 21, 0.4);
+  }
+  .keymap .grp:first-child { margin-top: 0; }
+  .keymap .gk { white-space: nowrap; }
+  .keymap .gn { color: var(--gold); white-space: nowrap; font-size: 13px; }
+  .keymap .gn.hi { color: #7be0a6; }        /* the step: the art's first answer */
+  .keymap .gd { font-size: 11.5px; opacity: 0.72; line-height: 1.45; }
+  .keymap kbd {
+    font-family: "Cinzel", monospace; font-size: 11px;
+    background: #2c1a0a; border: 1px solid var(--saffron-dim);
+    border-radius: 4px; padding: 1px 6px; color: var(--gold);
+  }
+
+  /* Buttons that sit side by side (Back + Begin, Resume + Main Menu). */
+  .btn-row { display: flex; gap: 14px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  /* Secondary action — present and reachable, but never competing with the
+     primary one next to it. */
+  .btn-ghost {
+    background: transparent; color: var(--gold);
+    border-color: var(--saffron-dim); box-shadow: none;
+  }
+  .btn-ghost:hover { background: rgba(255, 157, 46, 0.12); border-color: var(--gold); }
+
+  /* ============================================================
+     TOUCH CONTROLS
+     ------------------------------------------------------------
+     Only rendered on coarse pointers, and only during a live round.
+     Each key emits the SAME key name the keyboard does (see KEYS in
+     game.js), so combat behaves identically on touch and keyboard.
+     ============================================================ */
+  .touch {
+    position: absolute; inset: 0; z-index: 20;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 10px 12px 12px;
+    pointer-events: none;   /* only the keys take input, not the gap between */
+  }
+  .touch.hidden { display: none; }
+  .touch .cluster { display: grid; gap: 6px; }
+  .tkey {
+    pointer-events: auto;
+    touch-action: none;          /* stop the browser panning/zooming mid-fight */
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    font-family: "Cinzel", serif; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.5px; line-height: 1;
+    color: var(--gold);
+    background: rgba(20, 12, 5, 0.5);
+    border: 1.5px solid var(--saffron-dim);
+    border-radius: 12px;
+    width: 52px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(2px);
+    transition: background 0.06s linear, transform 0.06s linear;
+  }
+  .tkey.on {
+    background: rgba(255, 157, 46, 0.55);
+    color: var(--bg-0); border-color: var(--gold);
+    transform: scale(0.94);
+  }
+  /* left cluster: the Pentra cross — move on X, attack/guard vector on Y */
+  .tpad { grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(2, 52px); }
+  .tpad .k-up    { grid-area: 1 / 2; }
+  .tpad .k-left  { grid-area: 2 / 1; }
+  .tpad .k-down  { grid-area: 2 / 2; }
+  .tpad .k-right { grid-area: 2 / 3; }
+  .tpad .k-jump  { grid-area: 1 / 3; }
+  /* right cluster: J/K under the thumb, abilities above — mirrors the keyboard */
+  .tacts { grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(2, 52px); }
+  .tacts .k-ult    { grid-area: 1 / 1; }
+  .tacts .k-shield { grid-area: 1 / 2; }
+  .tacts .k-chak   { grid-area: 1 / 3; }
+  .tacts .k-dodge  { grid-area: 2 / 1; }
+  .tacts .k-guard  { grid-area: 2 / 2; }
+  .tacts .k-strike { grid-area: 2 / 3; }
+  .tkey.k-strike { background: rgba(192, 57, 43, 0.45); border-color: var(--blood); }
+  .tkey.k-guard  { background: rgba(42, 111, 79, 0.45); border-color: #2a6f4f; }
+  /* The step is the art's FIRST answer, not a footnote — colour it like the
+     EVADE! it produces, and put it under the thumb beside GUARD. */
+  .tkey.k-dodge  { background: rgba(123, 224, 166, 0.38); border-color: #7be0a6; color: #d8fff0; }
+
+  /* ============================================================
+     GENERIC OVERLAY (menus sit on top of the canvas)
+     ============================================================ */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    text-align: center;
+    background: linear-gradient(180deg, rgba(10, 6, 2, 0.86), rgba(10, 6, 2, 0.94));
+    backdrop-filter: blur(2px);
+    z-index: 10;
+  }
+  .overlay.hidden { display: none; }
+
+  .title {
+    font-family: "Cinzel", serif;
+    font-weight: 900;
+    letter-spacing: 4px;
+    font-size: 54px;
+    margin: 0;
+    background: linear-gradient(180deg, var(--gold), var(--saffron));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 3px 18px rgba(255, 157, 46, 0.35);
+  }
+  .subtitle {
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    margin: -10px 0 0;
+    opacity: 0.85;
+  }
+
+  /* ============================================================
+     BUTTONS
+     ============================================================ */
+  .btn {
+    font-family: "Cinzel", serif;
+    font-weight: 700;
+    letter-spacing: 2px;
+    font-size: 18px;
+    padding: 12px 34px;
+    color: var(--bg-0);
+    background: linear-gradient(180deg, var(--gold), var(--saffron));
+    border: 2px solid var(--gold);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  }
+  .btn:hover  { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(255, 157, 46, 0.4); }
+  .btn:active { transform: translateY(1px); }
+
+  /* ============================================================
+     WEAPON SELECTION CARDS
+     ============================================================ */
+  .weapon-grid {
+    display: flex;
+    gap: 26px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* ============================================================
+     CHARACTER SELECT — portrait BESIDE the cards, not above them
+     ------------------------------------------------------------
+     It used to stack: title + 190px portrait + cards + button = ~620px in a
+     500px box, so BEGIN sat ~120px below the fold and you had to scroll to
+     start a match. In a landscape frame there were 50px of spare width and a
+     whole portrait's worth of wasted height. Side-by-side lands the lot.
+     It still wraps (and scrolls) if the frame is ever too narrow for the row.
+     ============================================================ */
+  #menu-select {
+    justify-content: center;
+    gap: 14px;
+    padding: 16px 24px;
+    overflow-y: auto;
+  }
+  .select-title { font-size: 30px; margin: 0; letter-spacing: 3px; }
+  .select-body {
+    display: flex; align-items: center; justify-content: center;
+    gap: 26px; flex-wrap: wrap; max-width: 100%;
+  }
+  .fighter-panel {
+    flex: 0 0 auto; width: 206px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .fighter-name {
+    font-family: "Cinzel", serif; font-size: 19px; font-weight: 700;
+    letter-spacing: 3px; color: var(--gold); margin: 10px 0 0;
+  }
+  .fighter-epithet { font-size: 11px; opacity: 0.6; margin: 2px 0 0; letter-spacing: 1px; }
+  /* The authentic shastar record — 31in, hilt 6 + blade 25, 600g, tempo. All of
+     it already lives in WEAPONS; none of it was ever on screen. */
+  .shastar-spec {
+    display: grid; grid-template-columns: auto 1fr; gap: 3px 10px;
+    margin: 12px 0 0; width: 100%; text-align: left;
+    font-size: 11px; line-height: 1.45;
+    border-top: 1px solid var(--saffron-dim); padding-top: 10px;
+  }
+  .shastar-spec dt {
+    font-family: "Cinzel", serif; font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--saffron); opacity: 0.8; align-self: center;
+  }
+  .shastar-spec dd { margin: 0; color: var(--ink); opacity: 0.85; }
+  .portrait {
+    width: 168px;
+    height: 168px;
+    border-radius: 50%;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 0 2px var(--saffron-dim);
+    background: #0b1322;
+  }
+  .weapon-card {
+    width: 250px;
+    padding: 20px;
+    background: linear-gradient(180deg, var(--bg-1), #160c05);
+    border: 2px solid var(--saffron-dim);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+  }
+  .weapon-card:hover {
+    transform: translateY(-6px);
+    border-color: var(--gold);
+    box-shadow: 0 12px 30px rgba(255, 157, 46, 0.3);
+  }
+  .weapon-card.selected {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px var(--gold), 0 12px 30px rgba(255, 157, 46, 0.4);
+  }
+  .weapon-card h3 {
+    font-family: "Cinzel", serif;
+    font-size: 24px;
+    margin: 6px 0 4px;
+    color: var(--gold);
+  }
+  .weapon-card .wclass {
+    font-family: "Cinzel", serif; font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: #e6b845; opacity: 0.75; margin-bottom: 6px;
+  }
+  .weapon-card .flavor { font-size: 13px; opacity: 0.7; min-height: 34px; }
+
+  /* Weapon icon is a tiny inline canvas so the art matches the in-game vector style. */
+  .weapon-card canvas { display: block; margin: 6px auto 10px; }
+
+  /* Stat bars inside the card */
+  .stat { text-align: left; font-size: 12px; letter-spacing: 1px; margin: 6px 0; }
+  .stat .bar {
+    height: 8px;
+    margin-top: 3px;
+    border-radius: 4px;
+    background: #3a2410;
+    overflow: hidden;
+  }
+  .stat .fill { height: 100%; background: linear-gradient(90deg, var(--saffron), var(--gold)); }
+
+  /* ============================================================
+     CONTROLS HELP + MISC
+     ============================================================ */
+  /* ============================================================
+     MAIN MENU — hero right, copy left
+     ------------------------------------------------------------
+     The button invites you into the akhara, so the akhara has to be
+     VISIBLE. `drawBackground` renders the arena every frame; the old flat
+     86–94% blackout simply threw it away. This gradient stays opaque under
+     the copy and clears over the right third, where Akaal stands.
+     ============================================================ */
+  #menu-main {
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+    padding: 16px 0 16px 58px;
+    text-align: left;
+    background: linear-gradient(96deg,
+      rgba(10, 6, 2, 0.96)  0%,
+      rgba(10, 6, 2, 0.93) 38%,
+      rgba(10, 6, 2, 0.64) 58%,
+      rgba(10, 6, 2, 0.24) 76%,
+      rgba(10, 6, 2, 0.44) 100%);
+    backdrop-filter: none;   /* would blur the warrior standing behind it */
+  }
+  /* The copy is a flex column bounded by the stage, and ONLY the codex is
+     allowed to give. So the codex takes exactly the room left over and scrolls
+     inside itself — the title and button never squash, and nothing can be cut
+     off the bottom no matter how long the rules get. No magic heights. */
+  #menu-main .copy {
+    width: 430px;
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+    min-height: 0;
+  }
+  #menu-main .copy > *       { flex: 0 0 auto; }          /* title/button hold their size */
+  #menu-main .copy > .codex  { flex: 1 1 auto; min-height: 0; }  /* the codex absorbs the rest */
+  /* ੴ — Ik Onkar, opening the work.
+     Cinzel and Marcellus are Latin-only, so this needs an explicit Gurmukhi
+     stack or it renders as tofu: Nirmala UI (Windows), Gurmukhi MN / Sangam
+     (macOS), Noto Sans Gurmukhi (Android/Linux), Raavi (older Windows).
+     Given room and a still, warm glow — no animation, nothing interactive. */
+  #menu-main .onkar {
+    font-family: "Nirmala UI", "Gurmukhi MN", "Gurmukhi Sangam MN",
+                 "Noto Sans Gurmukhi", "Raavi", "Arial Unicode MS", serif;
+    font-size: 46px;
+    line-height: 1.1;
+    color: var(--gold);
+    margin: 0 0 14px;
+    text-shadow: 0 0 26px rgba(255, 157, 46, 0.45);
+  }
+  #menu-main .eyebrow {
+    display: flex; align-items: center; gap: 10px;
+    font-family: "Cinzel", serif; font-size: 11px; letter-spacing: 0.32em;
+    text-transform: uppercase; color: var(--saffron); margin: 0 0 14px; opacity: 0.9;
+  }
+  #menu-main .eyebrow::before { content: ""; width: 26px; height: 2px; background: var(--saffron); }
+  #menu-main .title { font-size: 62px; line-height: 0.9; letter-spacing: 3px; }
+  #menu-main .subtitle { margin: 12px 0 0; letter-spacing: 1.5px; }
+  #menu-main .btn { margin-top: 26px; }
+  #menu-main .hint { font-size: 12px; opacity: 0.55; letter-spacing: 1px; margin: 14px 0 0; }
+
+  /* The rules used to be dumped onto the title screen — ~12 lines of manual
+     competing with the one thing the screen is for. Folded away, not deleted. */
+  .codex {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;   /* lets the panel below shrink instead of overflowing */
+  }
+  .codex summary {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none;
+    font-family: "Cinzel", serif; font-size: 11px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gold); opacity: 0.75; padding: 6px 0;
+  }
+  .codex summary::-webkit-details-marker { display: none; }
+  .codex summary::before { content: "▸"; transition: transform 0.15s ease; }
+  .codex[open] summary::before { transform: rotate(90deg); }
+  .codex summary:hover, .codex summary:focus-visible { opacity: 1; }
+  .rules { margin-top: 14px; }
+  .rules p { margin: 0 0 7px; font-size: 11.5px; line-height: 1.5; opacity: 0.72; max-width: none; }
+  .rules .rk { color: var(--gold); opacity: 1; }
+
+  .codex .controls {
+    flex: 1 1 auto; min-height: 0;   /* fills the leftover space, then scrolls */
+    margin-top: 6px; overflow-y: auto; padding-right: 12px;
+    border-left: 2px solid var(--saffron-dim); padding-left: 14px;
+    scrollbar-width: thin; scrollbar-color: var(--saffron-dim) transparent;
+  }
+  .codex .controls::-webkit-scrollbar { width: 6px; }
+  .codex .controls::-webkit-scrollbar-thumb {
+    background: var(--saffron-dim); border-radius: 3px;
+  }
+
+  .controls {
+    font-size: 13px;
+    line-height: 1.8;
+    opacity: 0.8;
+    max-width: 560px;
+  }
+  .controls kbd {
+    font-family: "Cinzel", monospace;
+    background: #2c1a0a;
+    border: 1px solid var(--saffron-dim);
+    border-radius: 4px;
+    padding: 1px 7px;
+    color: var(--gold);
+  }
+</style>
+</head>
+
+<body>
+  <div id="stage">
+    <!-- The single canvas everything is rendered to. -->
+    <canvas id="game" width="900" height="500"></canvas>
+
+    <!-- Corner toggles. Above every overlay so they are always reachable. -->
+    <button id="mute" class="hud-btn" aria-label="Toggle sound" aria-pressed="false"
+            title="Sound">&#128266;</button>
+    <!-- On-screen controls appear by themselves on a phone; this forces them on
+         anywhere, so they can be seen and used on a desktop too. -->
+    <button id="tpad-toggle" class="hud-btn" aria-label="Toggle on-screen controls"
+            aria-pressed="false" title="On-screen controls (shown during a round)">&#127918;</button>
+    <!-- Pause. GAMEPLAY had no exit at all before this — on a phone there was not
+         even an Esc key to reach for. Only shown while a round is running. -->
+    <button id="pause-btn" class="hud-btn hidden" aria-label="Pause"
+            title="Pause (Esc)">&#9208;</button>
+
+    <!-- ============================================================
+         TOUCH CONTROLS — shown only on coarse pointers, during a round.
+         data-key values are the SAME keys the keyboard emits, so they feed
+         InputManager.press/release and every combat rule stays shared.
+         ============================================================ -->
+    <div id="touch" class="touch hidden">
+      <div class="cluster tpad">
+        <button class="tkey k-up"    data-key="w" aria-label="High vector">&uarr;</button>
+        <button class="tkey k-jump"  data-key=" " aria-label="Jump">JUMP</button>
+        <button class="tkey k-left"  data-key="a" aria-label="Move left">&larr;</button>
+        <button class="tkey k-down"  data-key="s" aria-label="Low vector">&darr;</button>
+        <button class="tkey k-right" data-key="d" aria-label="Move right">&rarr;</button>
+      </div>
+      <div class="cluster tacts">
+        <button class="tkey k-ult"    data-key="o" aria-label="Ultimate">ULT</button>
+        <button class="tkey k-shield" data-key="i" aria-label="Iron Shield">SHLD</button>
+        <button class="tkey k-chak"   data-key="u" aria-label="Chakram Storm">CHAK</button>
+        <button class="tkey k-dodge"  data-key="Shift" aria-label="Pentra side-step (dodge)">STEP</button>
+        <button class="tkey k-guard"  data-key="k" aria-label="Guard">GUARD</button>
+        <button class="tkey k-strike" data-key="j" aria-label="Strike">STRIKE</button>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         OVERLAY 1 — MAIN MENU
+         Shown while Game.state === STATE.MAIN_MENU
+         ============================================================ -->
+    <div id="menu-main" class="overlay">
+      <div class="copy">
+      <!-- ੴ — Ik Onkar. The invocation a work opens with, not a caption on it.
+           It stands alone and unglossed, the way it is written at the head of a
+           letter; it is not animated and it is not a button. -->
+      <p class="onkar" lang="pa" aria-label="Ik Onkar">&#2676;</p>
+      <p class="eyebrow">ਅਖਾੜਾ &middot; The Training Ground</p>
+      <h1 class="title">GATKA<br />WARRIORS</h1>
+      <p class="subtitle">ਗਤਕਾ &mdash; The Warrior's Art</p>
+      <button class="btn" data-action="goto-select">ENTER THE AKHARA</button>
+      <p class="hint">
+        Press <kbd>Enter</kbd> to begin &nbsp;•&nbsp; fully keyboard-playable
+      </p>
+      <button class="btn btn-ghost btn-sm" data-action="show-guide">HOW TO PLAY</button>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         OVERLAY 1b — HOW TO PLAY
+         Its own screen, because it needs the WHOLE frame. Squeezed into the
+         430px title column beside Akaal, every description wrapped to six
+         lines and less than half the guide was reachable. At full width the
+         same text wraps to two lines and all of it fits.
+         ============================================================ -->
+    <div id="menu-guide" class="overlay hidden">
+      <h1 class="title guide-title">HOW TO PLAY</h1>
+      <div class="guide-body-wrap">
+        <!-- Generated by Game._buildControlGuide() from the KEYS table. -->
+        <div class="keymap" id="guide-body"></div>
+        <div class="rules">
+          <p><span class="rk">The nagara marks the beat.</span> Strike on it for more damage,
+            guard on it to PARRY, step on it to become untouchable. Heavier shastar beat slower
+            &mdash; the drum you hear is your weapon's tempo.</p>
+          <p><span class="rk">Keep moving.</span> Standing still weakens your guard and stops
+            Balance recovery. Empty a foe's Balance to STAGGER them (red ring) for a heavy punish.</p>
+          <p><span class="rk">Chain 3 on-beat actions</span> to enter FLOW (golden aura) &mdash;
+            free combo-cancels and bonus damage.</p>
+        </div>
+      </div>
+      <button class="btn btn-ghost" data-action="to-menu">&larr; BACK</button>
+    </div>
+
+    <!-- ============================================================
+         OVERLAY 2 — WEAPON / CHARACTER SELECTION
+         Shown while Game.state === STATE.CHARACTER_SELECT
+         The cards are wired up in game.js.
+         ============================================================ -->
+    <div id="menu-select" class="overlay hidden">
+      <h1 class="title select-title">CHOOSE YOUR SHASTAR</h1>
+      <div class="select-body">
+        <aside class="fighter-panel">
+          <!-- Portrait drawn by _drawSelectPortrait() in game.js. -->
+          <canvas id="select-portrait" width="260" height="260" class="portrait"
+                  aria-label="Akaal — character portrait"></canvas>
+          <p class="fighter-name">AKAAL</p>
+          <p class="fighter-epithet">The Undying &middot; <em>Sant&#8209;Sipahi</em></p>
+          <!-- Authentic shastar record; filled from WEAPONS by _renderShastarSpec(). -->
+          <dl class="shastar-spec" id="shastar-spec"></dl>
+        </aside>
+        <div class="weapon-grid" id="weapon-grid"><!-- cards injected by JS --></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" data-action="to-menu">&larr; BACK</button>
+        <button class="btn" data-action="start-match" id="start-btn">BEGIN &mdash; BEST OF 3</button>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         OVERLAY 2b — PAUSE
+         The field stays visible behind it: you are looking at the fight,
+         stopped, not at a separate screen.
+         ============================================================ -->
+    <div id="menu-pause" class="overlay hidden">
+      <h1 class="title pause-title">PAUSED</h1>
+      <!-- The SAME guide as the title screen, from the same source. You pause
+           because you forgot which button does what; this is where to answer it. -->
+      <div class="keymap" id="pause-guide"></div>
+      <div class="btn-row">
+        <button class="btn" data-action="resume">RESUME</button>
+        <button class="btn btn-ghost" data-action="to-menu">MAIN MENU</button>
+      </div>
+      <p class="hint" style="font-size:12px;opacity:0.55;letter-spacing:1px;margin:0">
+        <kbd>Esc</kbd> or <kbd>P</kbd> to resume
+      </p>
+    </div>
+
+    <!-- ============================================================
+         OVERLAY 3 — ROUND OVER banner
+         Toggled by JS; text filled dynamically.
+         ============================================================ -->
+    <div id="menu-round" class="overlay hidden">
+      <h1 class="title" id="round-title" style="font-size:60px">ROUND</h1>
+      <p class="subtitle" id="round-sub">Fateh!</p>
+    </div>
+
+    <!-- ============================================================
+         OVERLAY 4 — GAME OVER / MATCH RESULT
+         ============================================================ -->
+    <div id="menu-over" class="overlay hidden">
+      <h1 class="title" id="over-title">VICTORY</h1>
+      <p class="subtitle" id="over-sub">Waheguru Ji Ki Fateh</p>
+      <button class="btn" data-action="rematch">REMATCH</button>
+      <button class="btn" data-action="to-menu" style="background:linear-gradient(180deg,#8a5a2a,#5e3a17);color:var(--ink);border-color:var(--saffron-dim)">MAIN MENU</button>
+    </div>
+  </div>
+
+  <!-- Game engine. type="module" keeps scope clean and lets us use modern JS. -->
+  <script src="game.js"></script>
+</body>
+</html>

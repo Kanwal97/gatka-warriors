@@ -1,0 +1,791 @@
+<title>Akaal — The Undying · Character Dossier</title>
+<meta name="description" content="Character design dossier for Akaal, the Sant-Sipahi warrior of Gatka Warriors." />
+
+<style>
+  /* ============================================================
+     COLOUR STANDARD — a committed dark "neela" (indigo) codex.
+     Single-theme by choice: a roster splash lives in the dark.
+     Tokens on :root only, so the viewer's theme toggle leaves the
+     intended cinematic world intact.
+     ============================================================ */
+  :root {
+    --ground:      #0b1322;
+    --ground-2:    #0e1a30;
+    --panel:       #15213c;
+    --panel-2:     #1b2a4b;
+    --line:        #29395c;   /* indigo hairline */
+    --steel:       #93a4c2;   /* blue-biased neutral — chosen, not default */
+    --steel-dim:   #64769a;
+    --parchment:   #eaeef6;
+    --saffron:     #ff9d2e;   /* THE accent */
+    --saffron-deep:#e07d13;
+    --gold:        #ffd47a;
+    --blade:       #cdd8e8;
+
+    --maxw: 1000px;
+
+    --serif: "Palatino Linotype", "Book Antiqua", Palatino, "URW Palladio L", Georgia, serif;
+    --sans:  "Gill Sans MT", "Gill Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono:  "Consolas", "SFMono-Regular", ui-monospace, "Roboto Mono", monospace;
+
+    --step--1: clamp(0.78rem, 0.75rem + 0.15vw, 0.86rem);
+    --step-0:  clamp(1rem, 0.96rem + 0.2vw, 1.1rem);
+    --step-1:  clamp(1.3rem, 1.2rem + 0.5vw, 1.6rem);
+    --step-2:  clamp(1.8rem, 1.5rem + 1.4vw, 2.6rem);
+    --step-3:  clamp(3rem, 2rem + 5vw, 6rem);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(120% 80% at 50% -10%, #17264a 0%, var(--ground) 55%, #070d18 100%);
+    color: var(--parchment);
+    font-family: var(--sans);
+    font-size: var(--step-0);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  /* ---- Shared section scaffolding --------------------------------- */
+  .section { padding: 62px 0; border-top: 1px solid var(--line); }
+  .section:first-of-type { border-top: 0; }
+
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: var(--sans);
+    font-size: var(--step--1);
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--saffron);
+    margin: 0 0 18px;
+  }
+  .eyebrow::before {
+    content: ""; width: 22px; height: 2px; background: var(--saffron);
+  }
+
+  h2.head {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: var(--step-2);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-wrap: balance;
+    margin: 0 0 22px;
+    color: var(--parchment);
+  }
+  .lede { max-width: 62ch; color: var(--steel); font-size: var(--step-1); line-height: 1.5; }
+  p { max-width: 66ch; }
+  strong { color: var(--parchment); font-weight: 600; }
+  .gur { font-style: normal; color: var(--gold); font-family: var(--serif); }
+
+  /* ============================================================
+     HERO — the thesis. Live canvas + monumental wordmark.
+     ============================================================ */
+  .hero { position: relative; padding-top: 40px; }
+  .hero-stage {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 8.4;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #0d1a32, #070d18);
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  #heroCanvas { display: block; width: 100%; height: 100%; }
+
+  .hero-titleblock {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 26px 30px;
+    background: linear-gradient(0deg, rgba(7,13,24,0.92) 10%, rgba(7,13,24,0) 100%);
+    pointer-events: none;
+  }
+  .kicker {
+    font-family: var(--sans);
+    letter-spacing: 0.4em; text-transform: uppercase;
+    font-size: var(--step--1); color: var(--saffron); margin: 0 0 6px;
+  }
+  .wordmark {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: var(--step-3);
+    line-height: 0.9;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 0;
+    color: var(--parchment);
+    text-shadow: 0 6px 30px rgba(0,0,0,0.6);
+  }
+  .wordmark .undying {
+    display: block;
+    font-size: 0.26em;
+    letter-spacing: 0.5em;
+    color: var(--gold);
+    margin-top: 0.5em;
+  }
+  .thesis {
+    margin: 22px auto 0;
+    max-width: 74ch;
+    text-align: center;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: var(--step-1);
+    color: var(--steel);
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 22px; }
+  .chip {
+    font-family: var(--mono); font-size: var(--step--1);
+    letter-spacing: 0.06em;
+    padding: 6px 14px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--panel);
+    color: var(--steel);
+  }
+  .chip b { color: var(--gold); font-weight: 600; }
+
+  /* ============================================================
+     BANA — attire breakdown grid.
+     ============================================================ */
+  .grid-bana { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1px;
+    background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .bana-cell { background: var(--panel); padding: 22px; }
+  .bana-cell h3 {
+    font-family: var(--serif); font-size: var(--step-1); margin: 0 0 2px; color: var(--gold);
+    letter-spacing: 0.01em;
+  }
+  .bana-cell .en { font-size: var(--step--1); text-transform: uppercase; letter-spacing: 0.18em; color: var(--steel-dim); margin: 0 0 10px; }
+  .bana-cell p { margin: 0; font-size: var(--step--1); color: var(--steel); max-width: none; }
+
+  /* ============================================================
+     KIT — weapon + three ability cards.
+     ============================================================ */
+  .kit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin-top: 8px; }
+  .card {
+    position: relative;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px 22px 22px;
+    overflow: hidden;
+  }
+  .card::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--saffron), var(--saffron-deep));
+  }
+  .card .roman {
+    font-family: var(--serif); font-size: var(--step--1);
+    letter-spacing: 0.2em; color: var(--saffron); text-transform: uppercase;
+  }
+  .card h3 { font-family: var(--serif); font-size: var(--step-1); margin: 6px 0 2px; color: var(--parchment); }
+  .card .translit { font-size: var(--step--1); color: var(--gold); margin: 0 0 14px; letter-spacing: 0.04em; }
+  .card p { font-size: var(--step--1); color: var(--steel); margin: 0 0 16px; max-width: none; }
+  .card .meta { display: flex; gap: 18px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .card .meta div { display: flex; flex-direction: column; }
+  .card .meta .k { font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-dim); }
+  .card .meta .v { font-family: var(--mono); font-size: var(--step-0); color: var(--blade); font-variant-numeric: tabular-nums; }
+
+  /* ============================================================
+     COMBAT PROFILE — stat bars.
+     ============================================================ */
+  .profile { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: start; }
+  @media (max-width: 720px) { .profile { grid-template-columns: 1fr; gap: 28px; } }
+  .stats { display: flex; flex-direction: column; gap: 16px; }
+  .stat .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .stat .label { font-size: var(--step--1); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel); }
+  .stat .num { font-family: var(--mono); color: var(--gold); font-variant-numeric: tabular-nums; font-size: var(--step-0); }
+  .track { height: 8px; border-radius: 5px; background: var(--ground-2); border: 1px solid var(--line); overflow: hidden; }
+  .fill { height: 100%; border-radius: 4px 0 0 4px; background: linear-gradient(90deg, var(--saffron-deep), var(--saffron) 60%, var(--gold)); }
+  .fill.cool { background: linear-gradient(90deg, #1f6f8a, #45c6e6); }
+
+  .playstyle { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 24px; }
+  .playstyle h3 { font-family: var(--serif); color: var(--gold); margin: 0 0 12px; font-size: var(--step-1); }
+  .playstyle p { font-size: var(--step--1); color: var(--steel); margin: 0 0 14px; }
+  .playstyle .tag { display: inline-block; font-family: var(--mono); font-size: 0.72rem; color: var(--blade);
+    border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; margin: 3px 4px 0 0; letter-spacing: 0.04em; }
+
+  /* ============================================================
+     COLOUR STANDARD — swatches.
+     ============================================================ */
+  .swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+  .sw { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+  .sw .chipc { height: 74px; }
+  .sw .meta { padding: 10px 12px; }
+  .sw .nm { font-size: var(--step--1); color: var(--parchment); }
+  .sw .hx { font-family: var(--mono); font-size: 0.72rem; color: var(--steel-dim); text-transform: uppercase; }
+
+  /* ============================================================
+     REFERENCE PLATES — copyable AI prompts.
+     ============================================================ */
+  .plate { background: var(--ground-2); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+  .plate-head { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 14px 18px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .plate-head .t { font-family: var(--serif); color: var(--gold); font-size: var(--step-0); letter-spacing: 0.03em; }
+  .plate-head .m { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-dim); }
+  .copy-btn {
+    font-family: var(--sans); font-size: var(--step--1); letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ground); background: var(--saffron); border: 0; border-radius: 6px; padding: 6px 14px; cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .copy-btn:hover { background: var(--gold); }
+  .copy-btn:active { transform: translateY(1px); }
+  .copy-btn.done { background: #45c6e6; }
+  .copy-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .plate pre { margin: 0; padding: 18px; overflow-x: auto; font-family: var(--mono);
+    font-size: var(--step--1); line-height: 1.7; color: var(--blade); white-space: pre-wrap; }
+
+  /* ---- footer ---- */
+  .foot { padding: 40px 0 64px; border-top: 1px solid var(--line); color: var(--steel-dim); font-size: var(--step--1); text-align: center; }
+  .foot b { color: var(--steel); font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <!-- ===================== HERO ===================== -->
+  <header class="hero section">
+    <div class="hero-stage">
+      <canvas id="heroCanvas" aria-label="Akaal, a Sikh Nihang warrior, standing before a spinning steel chakram."></canvas>
+      <div class="hero-titleblock">
+        <p class="kicker">Gatka Warriors · Playable Roster</p>
+        <h1 class="wordmark">Akaal<span class="undying">The Undying</span></h1>
+      </div>
+    </div>
+    <p class="thesis">&ldquo;A saint who will not be moved, a soldier who cannot be stopped —
+      every strike a prayer, every parry a vow.&rdquo;</p>
+    <div class="chips">
+      <span class="chip">Archetype · <b>Sant-Sipahi</b></span>
+      <span class="chip">Weapon · <b>Khanda</b></span>
+      <span class="chip">Resource · <b>Simran</b></span>
+      <span class="chip">Range · <b>Mid</b></span>
+      <span class="chip">Difficulty · <b>Read-heavy</b></span>
+    </div>
+  </header>
+
+  <!-- ===================== IDENTITY ===================== -->
+  <section class="section">
+    <span class="eyebrow">Identity</span>
+    <h2 class="head">The Saint-Soldier</h2>
+    <p class="lede">Akaal is the last initiated guardian of a hidden <em>Bunga</em> — an
+      armoury-monastery that has stood since the age of the Guru&rsquo;s warriors.</p>
+    <p>He trained not to conquer but to protect the defenceless — a living oath. When the
+      sanctuaries were threatened he took up the full <strong>Bana</strong> and walked out into
+      the world: no army behind him, no throne ahead, only the vow. He offers mercy before every
+      fight and never strikes the fallen — yet once steel is drawn in defence, he is a storm,
+      utterly without fear of death. This is the paradox the character is built to express:
+      <span class="gur">Nirbhau, Nirvair</span> — without fear, without hatred.</p>
+    <p>He fights <em>smiling</em>. Victory and hardship are met with the same buoyant resolve —
+      <span class="gur">Chardi Kala</span>, eternal high spirits — which colours his every
+      battle-bark and drives the design of his ultimate.</p>
+  </section>
+
+  <!-- ===================== THE BANA ===================== -->
+  <section class="section">
+    <span class="eyebrow">Visual Design · The Bana</span>
+    <h2 class="head">Attire &amp; Silhouette</h2>
+    <p class="lede" style="margin-bottom:26px">The silhouette must read from the character-select
+      screen at a glance: <strong>tall turban, flowing robe, layered steel.</strong></p>
+    <div class="grid-bana">
+      <div class="bana-cell">
+        <h3>Dumalla</h3><p class="en">Fortified turban</p>
+        <p>A towering, layered dome — historically a mobile armoury. A steel <em>Chakram</em> is
+          seated at the crown; a saffron <em>Farla</em> pennant streams from the peak as his
+          signature in motion.</p>
+      </div>
+      <div class="bana-cell">
+        <h3>Chola</h3><p class="en">Warrior robe</p>
+        <p>A wrapped combat tunic cinched by the <em>Kamarkasa</em> battle-sash — cut short in
+          front, long in back, so it billows through Gatka spins without hiding leg reads.</p>
+      </div>
+      <div class="bana-cell">
+        <h3>Hajooria</h3><p class="en">Sacred cloth</p>
+        <p>A length of cloth draped across the torso in a contrasting teal — practically doubling
+          as a combat wrap that can be gripped, snapped, or used to bind.</p>
+      </div>
+      <div class="bana-cell">
+        <h3>Dhal &amp; Kara</h3><p class="en">Shield &amp; steel</p>
+        <p>A round <em>Dhal</em> with a central boss rides the lead forearm; the steel
+          <em>Kara</em> bracelet anchors his Iron-Shield ability.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SHASTAR & KIT ===================== -->
+  <section class="section">
+    <span class="eyebrow">Gameplay · Shastar &amp; The Kit</span>
+    <h2 class="head">Signature Abilities</h2>
+    <p class="lede" style="margin-bottom:26px">Three abilities, each drawn from his attire and
+      fuelled by <strong>Simran</strong> — the focus meter that fills as he lands and reads attacks.</p>
+    <div class="kit-grid">
+      <article class="card">
+        <span class="roman">Ability I</span>
+        <h3>Chakram Storm</h3>
+        <p class="translit">Steel discs from the Dumalla</p>
+        <p>Launches a fan of three spinning discs on the High / Mid / Low vectors at once,
+          zoning approach and mixing up the opponent&rsquo;s blocking direction.</p>
+        <div class="meta">
+          <div><span class="k">Cost</span><span class="v">34</span></div>
+          <div><span class="k">Type</span><span class="v">Ranged</span></div>
+          <div><span class="k">Discs</span><span class="v">3</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <span class="roman">Ability II</span>
+        <h3>Sarbloh Kavach</h3>
+        <p class="translit">The Iron Shield</p>
+        <p>Raises a shimmering steel-light matrix that absorbs the next incoming blow from any
+          vector and reflects it as posture damage — a hard read that punishes aggression.</p>
+        <div class="meta">
+          <div><span class="k">Cost</span><span class="v">30</span></div>
+          <div><span class="k">Type</span><span class="v">Reflect</span></div>
+          <div><span class="k">Window</span><span class="v">0.8s</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <span class="roman">Ultimate</span>
+        <h3>Chardi Kala</h3>
+        <p class="translit">The Undying Storm</p>
+        <p>A sweeping 360&deg; Khanda spin — two AoE pulses that stagger everything nearby. He
+          cannot be interrupted and <em>cannot die</em> for the duration. The poster moment.</p>
+        <div class="meta">
+          <div><span class="k">Cost</span><span class="v">100</span></div>
+          <div><span class="k">Type</span><span class="v">AoE</span></div>
+          <div><span class="k">State</span><span class="v">Invuln</span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===================== COMBAT PROFILE ===================== -->
+  <section class="section">
+    <span class="eyebrow">Gameplay · Combat Profile</span>
+    <h2 class="head">Flowing Steel</h2>
+    <div class="profile">
+      <div class="stats" aria-label="Combat statistics">
+        <div class="stat">
+          <div class="row"><span class="label">Health</span><span class="num">100</span></div>
+          <div class="track"><div class="fill" style="width:100%"></div></div>
+        </div>
+        <div class="stat">
+          <div class="row"><span class="label">Damage</span><span class="num">96</span></div>
+          <div class="track"><div class="fill" style="width:96%"></div></div>
+        </div>
+        <div class="stat">
+          <div class="row"><span class="label">Reach</span><span class="num">62</span></div>
+          <div class="track"><div class="fill" style="width:62%"></div></div>
+        </div>
+        <div class="stat">
+          <div class="row"><span class="label">Speed</span><span class="num">30</span></div>
+          <div class="track"><div class="fill" style="width:30%"></div></div>
+        </div>
+        <div class="stat">
+          <div class="row"><span class="label">Mobility · Gatka Spin</span><span class="num">78</span></div>
+          <div class="track"><div class="fill cool" style="width:78%"></div></div>
+        </div>
+      </div>
+      <div class="playstyle">
+        <h3>Playstyle</h3>
+        <p>A mid-range momentum fighter. He weaves with spinning Gatka footwork — dodges chain
+          into attacks — then punctuates combos with committed, super-armoured Khanda strikes.</p>
+        <p>High skill ceiling: punishing to a masher, lethal in patient hands. Rewards rhythm,
+          spacing, and the read.</p>
+        <span class="tag">Light · Kirpan chains</span>
+        <span class="tag">Heavy · armoured sweeps</span>
+        <span class="tag">Dodge · i-frame spin</span>
+        <span class="tag">Zone · Chakram fan</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== COLOUR STANDARD ===================== -->
+  <section class="section">
+    <span class="eyebrow">Art Direction</span>
+    <h2 class="head">Colour Standard</h2>
+    <p class="lede" style="margin-bottom:26px">Anchored in the Nihang&rsquo;s own deep
+      <strong>neela</strong> blue, with a single disciplined accent of <strong>kesari</strong>
+      saffron and cold steel for every shastar.</p>
+    <div class="swatches" id="swatches"></div>
+  </section>
+
+  <!-- ===================== REFERENCE PLATES ===================== -->
+  <section class="section">
+    <span class="eyebrow">Production · Concept Reference</span>
+    <h2 class="head">AI Reference Plates</h2>
+
+    <div class="plate">
+      <div class="plate-head">
+        <span class="t">Plate A — Realistic / Cinematic</span>
+        <span class="m">Midjourney · DALL·E 3 · SDXL</span>
+      </div>
+      <pre id="promptA">Cinematic full-body character render of a Sikh Nihang warrior-monk, the "Sant-Sipahi", wearing a tall fortified Dumalla turban studded with a steel chakram and a flowing saffron farla pennant. Layered royal-blue combat robe (chola) with a golden battle sash, a sacred cloth (hajooria) draped across the chest, a steel kara bracelet, and a curved kirpan on a chest strap. He holds a double-edged khanda sword, calm fierce expression, full beard, cold steel and electric-blue palette with gold accents. Dramatic rim lighting, volumetric dust, epic battlefield backdrop, Unreal Engine 5, octane render, hyper-detailed fabric and metal, 8k, photorealistic, heroic low-angle pose --ar 2:3 --style raw</pre>
+    </div>
+
+    <div class="plate">
+      <div class="plate-head">
+        <span class="t">Plate B — Stylised / Anime</span>
+        <span class="m">Midjourney Niji · SD anime</span>
+      </div>
+      <pre id="promptB">Stylised anime video-game character, a Sikh Nihang saint-soldier hero, dynamic action pose mid-spin (Gatka martial art). Towering blue dumalla turban with a glowing steel chakram crown and streaming golden farla cloth, electric-blue warrior robe, teal hajooria sash, dual swords (curved kirpan + double-edged khanda) trailing cyan energy, steel kada bracelet glowing. Confident smiling expression (chardi kala spirit), cel-shaded, bold clean linework, vibrant royal-blue and saffron-gold palette, rim lighting, speed-line background, splash-art fighting-game roster illustration, Arc System Works / Guilty Gear style, ultra-detailed --ar 2:3 --niji 6</pre>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p><b>Akaal — The Undying</b> · Character Dossier for <b>Gatka Warriors</b><br />
+      Rendered live in-engine · Deg Tegh Fateh</p>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   Palette swatches — build from the design tokens so the page
+   documents its own colour standard.
+   ============================================================ */
+const PALETTE = [
+  ["Neela Ground",  "#0b1322"],
+  ["Indigo Panel",  "#15213c"],
+  ["Steel (neutral)","#93a4c2"],
+  ["Kesari Saffron", "#ff9d2e"],
+  ["Farla Gold",     "#ffd47a"],
+  ["Cold Blade",     "#cdd8e8"],
+];
+const sw = document.getElementById("swatches");
+for (const [name, hex] of PALETTE) {
+  const el = document.createElement("div");
+  el.className = "sw";
+  el.innerHTML =
+    '<div class="chipc" style="background:' + hex + '"></div>' +
+    '<div class="meta"><div class="nm">' + name + '</div>' +
+    '<div class="hx">' + hex + '</div></div>';
+  sw.appendChild(el);
+}
+
+/* ============================================================
+   Copy buttons for the reference plates.
+   ============================================================ */
+document.querySelectorAll(".plate").forEach((plate) => {
+  const head = plate.querySelector(".plate-head");
+  const pre = plate.querySelector("pre");
+  const btn = document.createElement("button");
+  btn.className = "copy-btn";
+  btn.type = "button";
+  btn.textContent = "Copy";
+  btn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(pre.textContent.trim());
+      btn.textContent = "Copied ✓"; btn.classList.add("done");
+      setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("done"); }, 1600);
+    } catch (e) {
+      btn.textContent = "Select all";
+      const r = document.createRange(); r.selectNodeContents(pre);
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    }
+  });
+  head.appendChild(btn);
+});
+
+/* ============================================================
+   HERO CANVAS — spinning steel Chakram halo + the in-engine
+   Akaal vector art. This is the same drawing language the game
+   engine renders, so the pitch shows the real character.
+   ============================================================ */
+(function heroScene() {
+  const canvas = document.getElementById("heroCanvas");
+  const ctx = canvas.getContext("2d");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W = 0, H = 0, dpr = 1;
+
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // --- The Chakram halo: a war-quoit ring with edge notches + spokes ---
+  function drawChakram(cx, cy, R, spin) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    // ambient glow
+    const glow = ctx.createRadialGradient(0, 0, R * 0.2, 0, 0, R * 1.15);
+    glow.addColorStop(0, "rgba(69,198,230,0.10)");
+    glow.addColorStop(1, "rgba(69,198,230,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(0, 0, R * 1.15, 0, Math.PI * 2); ctx.fill();
+
+    ctx.rotate(spin);
+    // outer steel ring
+    const steel = ctx.createLinearGradient(-R, -R, R, R);
+    steel.addColorStop(0, "#5c6f8c");
+    steel.addColorStop(0.5, "#cdd8e8");
+    steel.addColorStop(1, "#3a4763");
+    ctx.strokeStyle = steel; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+    // inner ring
+    ctx.lineWidth = 2; ctx.strokeStyle = "rgba(147,164,194,0.55)";
+    ctx.beginPath(); ctx.arc(0, 0, R * 0.82, 0, Math.PI * 2); ctx.stroke();
+    // outer edge notches (the killing rim)
+    ctx.strokeStyle = "#e8eef5"; ctx.lineWidth = 2;
+    for (let i = 0; i < 48; i++) {
+      const a = (i / 48) * Math.PI * 2;
+      const r1 = R, r2 = R + (i % 2 ? 9 : 5);
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1);
+      ctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
+      ctx.stroke();
+    }
+    // radial spokes
+    ctx.strokeStyle = "rgba(205,216,232,0.25)"; ctx.lineWidth = 1.2;
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * R * 0.82, Math.sin(a) * R * 0.82);
+      ctx.lineTo(Math.cos(a) * R * 0.30, Math.sin(a) * R * 0.30);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // --- Akaal, ported from the engine's Artist (facing right, centred) ---
+  function drawAkaal(cx, feet, h) {
+    const C = { robe:"#1f5fa8", cloth:"#163a63", sash:"#e6b845", hajooria:"#2ec7c7",
+                turban:"#123a8a", skin:"#c98a52", beard:"#20140a", reach:92 };
+    const hipY = feet - h*0.44, chestY = feet - h*0.66, neckY = feet - h*0.80;
+    const headY = feet - h*0.90, headR = h*0.085;
+    const shd = (hex, f) => { const n = parseInt(hex.slice(1),16);
+      const r=Math.min(255,Math.round(((n>>16)&255)*f)), g=Math.min(255,Math.round(((n>>8)&255)*f)), b=Math.min(255,Math.round((n&255)*f));
+      return "rgb("+r+","+g+","+b+")"; };
+    ctx.save(); ctx.translate(cx, 0);
+
+    // shadow (wide grounded stance)
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.beginPath(); ctx.ellipse(0, feet+5, h*0.28, h*0.055, 0, 0, Math.PI*2); ctx.fill();
+    const SW = h*0.195, waistW = h*0.10, shoulderY = neckY + h*0.035, kneeY = feet - h*0.20;
+    // legs — powerful churidar, wide stance, boots
+    ctx.strokeStyle = C.cloth; ctx.lineWidth = h*0.085; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-h*0.055, hipY); ctx.lineTo(-h*0.085, kneeY); ctx.lineTo(-h*0.075, feet-h*0.03);
+    ctx.moveTo( h*0.055, hipY); ctx.lineTo( h*0.095, kneeY); ctx.lineTo( h*0.085, feet-h*0.03);
+    ctx.stroke();
+    ctx.fillStyle = "#241304";
+    ctx.beginPath(); ctx.ellipse(-h*0.06, feet-h*0.005, h*0.05, h*0.024, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse( h*0.10, feet-h*0.005, h*0.055, h*0.024, 0, 0, Math.PI*2); ctx.fill();
+    // chola skirt — flares over the thighs
+    ctx.fillStyle = C.robe;
+    ctx.beginPath();
+    ctx.moveTo(-waistW, hipY-2);
+    ctx.quadraticCurveTo(-SW*1.15, kneeY, -SW*0.8, feet-h*0.14);
+    ctx.quadraticCurveTo(0, feet-h*0.09, SW*0.8, feet-h*0.14);
+    ctx.quadraticCurveTo(SW*1.15, kneeY, waistW, hipY-2);
+    ctx.closePath(); ctx.fill();
+    // torso — broad shoulders → hard waist (the warrior V)
+    ctx.fillStyle = C.robe;
+    ctx.beginPath();
+    ctx.moveTo(-waistW, hipY);
+    ctx.quadraticCurveTo(-SW*1.02, chestY, -SW, shoulderY);
+    ctx.quadraticCurveTo(0, shoulderY-h*0.04, SW, shoulderY);
+    ctx.quadraticCurveTo(SW*1.02, chestY, waistW, hipY);
+    ctx.closePath(); ctx.fill();
+    // chest musculature hint
+    ctx.strokeStyle = shd(C.robe, 0.78); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, shoulderY+h*0.02); ctx.lineTo(0, hipY-3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-SW*0.5, chestY-h*0.015);
+    ctx.quadraticCurveTo(0, chestY+h*0.035, SW*0.5, chestY-h*0.015); ctx.stroke();
+    // shoulder deltoids
+    ctx.fillStyle = shd(C.robe, 1.08);
+    ctx.beginPath(); ctx.arc(-SW, shoulderY+h*0.012, h*0.056, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( SW, shoulderY+h*0.012, h*0.056, 0, Math.PI*2); ctx.fill();
+    // neck — thick
+    ctx.strokeStyle = C.skin; ctx.lineWidth = h*0.055; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(0, shoulderY-h*0.005); ctx.lineTo(0, headY+headR*0.5); ctx.stroke();
+    // hajooria + sash
+    ctx.strokeStyle = C.hajooria; ctx.lineWidth = h*0.033;
+    ctx.beginPath(); ctx.moveTo(-SW*0.72, shoulderY+h*0.02); ctx.lineTo(waistW*0.9, hipY+2); ctx.stroke();
+    ctx.strokeStyle = C.sash; ctx.lineWidth = h*0.05;
+    ctx.beginPath(); ctx.moveTo(-waistW-2, hipY-2); ctx.lineTo(waistW+2, hipY-5); ctx.stroke();
+    // shield arm + dhal (from the right shoulder)
+    const shX = h*0.05, shY = chestY - h*0.01;
+    ctx.strokeStyle = shd(C.robe, 1.05); ctx.lineWidth = h*0.06;
+    ctx.beginPath(); ctx.moveTo(SW*0.62, shoulderY); ctx.lineTo(shX, (shoulderY+shY)/2); ctx.stroke();
+    ctx.strokeStyle = C.skin; ctx.lineWidth = h*0.048;
+    ctx.beginPath(); ctx.moveTo(shX, (shoulderY+shY)/2); ctx.lineTo(shX+2, shY); ctx.stroke();
+    const dr = headR*1.7, dx = shX + h*0.055;
+    const dg = ctx.createRadialGradient(dx-dr*0.3, shY-dr*0.3, dr*0.2, dx, shY, dr);
+    dg.addColorStop(0, "#6b4a1f"); dg.addColorStop(1, "#2e1d0a");
+    ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(dx, shY, dr, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "#c9962f"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = "#e6b845"; ctx.beginPath(); ctx.arc(dx, shY, dr*0.24, 0, Math.PI*2); ctx.fill();
+    // weapon arm — upper arm + forearm, pivots at the left shoulder (raised heroically)
+    const armAngle = -0.95, armLen = h*0.34;
+    const shoulderX = -SW*0.58, shoulderYw = shoulderY + h*0.015;
+    const handX = shoulderX + Math.cos(armAngle)*armLen, handY = shoulderYw + Math.sin(armAngle)*armLen;
+    const elbowX = shoulderX + Math.cos(armAngle)*armLen*0.5, elbowY = shoulderYw + Math.sin(armAngle)*armLen*0.5;
+    ctx.strokeStyle = shd(C.robe, 1.05); ctx.lineWidth = h*0.062; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(shoulderX, shoulderYw); ctx.lineTo(elbowX, elbowY); ctx.stroke();
+    ctx.strokeStyle = C.skin; ctx.lineWidth = h*0.05;
+    ctx.beginPath(); ctx.moveTo(elbowX, elbowY); ctx.lineTo(handX, handY); ctx.stroke();
+    // khanda blade
+    ctx.save(); ctx.translate(handX, handY); ctx.rotate(armAngle);
+    const L = C.reach;
+    ctx.strokeStyle = "#7a5720"; ctx.lineWidth = 6; ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(-10,0); ctx.lineTo(4,0); ctx.stroke();
+    ctx.strokeStyle = "#e6b845"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(4,-8); ctx.lineTo(4,8); ctx.stroke();
+    ctx.fillStyle = "#dfe7ef";
+    ctx.beginPath();
+    ctx.moveTo(4,-5); ctx.lineTo(L-10,-4); ctx.lineTo(L,0); ctx.lineTo(L-10,4); ctx.lineTo(4,5);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle="#9fb0c0"; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(6,0); ctx.lineTo(L-8,0); ctx.stroke();
+    ctx.restore();
+    // head
+    ctx.fillStyle = C.skin; ctx.beginPath(); ctx.arc(0, headY, headR, 0, Math.PI*2); ctx.fill();
+    // FACE — eyes, eyebrows, pupils, nose (on the skin, under the beard)
+    const eyeX=headR*0.44, eyeY=headY-headR*0.23, ebY=headY-headR*0.34, ew=headR*0.20;
+    for (const side of [-1,1]) { const ex=side*eyeX;
+      ctx.fillStyle="#f4f1ea";
+      ctx.beginPath(); ctx.ellipse(ex,eyeY,ew*0.85,headR*0.11,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#3a2412"; ctx.beginPath(); ctx.arc(ex,eyeY,headR*0.085,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#0f0803"; ctx.beginPath(); ctx.arc(ex,eyeY,headR*0.045,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#ffffff"; ctx.beginPath(); ctx.arc(ex+headR*0.03,eyeY-headR*0.03,headR*0.022,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle="#2a160a"; ctx.lineWidth=headR*0.05; ctx.lineCap="round";
+      ctx.beginPath(); ctx.moveTo(ex-ew,eyeY-headR*0.03); ctx.quadraticCurveTo(ex,eyeY-headR*0.13,ex+ew,eyeY-headR*0.03); ctx.stroke();
+      ctx.strokeStyle="#1a0d06"; ctx.lineWidth=headR*0.1;
+      ctx.beginPath(); ctx.moveTo(ex-ew,ebY); ctx.quadraticCurveTo(ex,ebY-headR*0.09,ex+ew,ebY); ctx.stroke(); }
+    ctx.strokeStyle=shd(C.skin,0.82); ctx.lineWidth=headR*0.05; ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(0,eyeY+headR*0.03); ctx.lineTo(-headR*0.03,headY+headR*0.02);
+    ctx.quadraticCurveTo(0,headY+headR*0.06,headR*0.06,headY+headR*0.03); ctx.stroke();
+    // Facial hair — Prakash open beard (3 tonal layers + strands), upturned
+    // Kundal moustache, soul patch. Ported from the reference SVG, scaled to head.
+    ctx.save();
+    const fhk = headR/110;
+    ctx.translate(0, headY + headR*0.171); ctx.scale(fhk, fhk);
+    const bOuter=shd(C.beard,1.25), bMid=shd(C.beard,0.85), bFront=shd(C.beard,0.55),
+          bStrand=shd(C.beard,2.1), bEdge=shd(C.beard,1.5);
+    ctx.fillStyle=bOuter; ctx.beginPath();
+    ctx.moveTo(-115,-30); ctx.bezierCurveTo(-120,40,-105,110,-85,160);
+    ctx.bezierCurveTo(-60,210,-30,250,0,255); ctx.bezierCurveTo(30,250,60,210,85,160);
+    ctx.bezierCurveTo(105,110,120,40,115,-30); ctx.bezierCurveTo(95,-10,65,10,0,12);
+    ctx.bezierCurveTo(-65,10,-95,-10,-115,-30); ctx.closePath(); ctx.fill();
+    ctx.fillStyle=bMid; ctx.beginPath();
+    ctx.moveTo(-110,-10); ctx.bezierCurveTo(-115,50,-95,120,-75,170);
+    ctx.bezierCurveTo(-50,220,-25,240,0,242); ctx.bezierCurveTo(25,240,50,220,75,170);
+    ctx.bezierCurveTo(95,120,115,50,110,-10); ctx.bezierCurveTo(85,10,55,25,0,26);
+    ctx.bezierCurveTo(-55,25,-85,10,-110,-10); ctx.closePath(); ctx.fill();
+    ctx.fillStyle=bFront; ctx.beginPath();
+    ctx.moveTo(-100,10); ctx.bezierCurveTo(-105,60,-85,130,-65,175);
+    ctx.bezierCurveTo(-45,215,-20,230,0,232); ctx.bezierCurveTo(20,230,45,215,65,175);
+    ctx.bezierCurveTo(85,130,105,60,100,10); ctx.bezierCurveTo(75,28,45,38,0,38);
+    ctx.bezierCurveTo(-45,38,-75,28,-100,10); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle=bStrand; ctx.lineWidth=1.3/fhk; ctx.globalAlpha=0.55; ctx.lineCap="round";
+    for (const s of [[-105,20,-100,90,-70,160,-40,210],[-85,50,-80,120,-55,180,-15,225],
+      [105,20,100,90,70,160,40,210],[85,50,80,120,55,180,15,225],[0,40,-10,110,-20,170,0,230],
+      [-45,60,-30,130,-10,195,0,215],[45,60,30,130,10,195,0,215]]) {
+      ctx.beginPath(); ctx.moveTo(s[0],s[1]); ctx.bezierCurveTo(s[2],s[3],s[4],s[5],s[6],s[7]); ctx.stroke(); }
+    ctx.globalAlpha=1;
+    ctx.fillStyle=bFront; ctx.strokeStyle=bOuter; ctx.lineWidth=1/fhk;
+    for (const sx of [1,-1]) { ctx.beginPath(); ctx.moveTo(0,2);
+      ctx.bezierCurveTo(sx*-15,1,sx*-45,12,sx*-65,5); ctx.bezierCurveTo(sx*-85,-2,sx*-100,-22,sx*-102,-42);
+      ctx.bezierCurveTo(sx*-102,-42,sx*-92,-40,sx*-82,-28); ctx.bezierCurveTo(sx*-72,-16,sx*-60,-12,sx*-45,-4);
+      ctx.bezierCurveTo(sx*-30,4,sx*-10,8,0,8); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    ctx.strokeStyle=bEdge; ctx.lineWidth=1.2/fhk;
+    for (const sx of [1,-1]) { ctx.beginPath(); ctx.moveTo(sx*-5,4);
+      ctx.bezierCurveTo(sx*-25,4,sx*-55,12,sx*-72,2); ctx.bezierCurveTo(sx*-88,-8,sx*-96,-25,sx*-96,-25); ctx.stroke(); }
+    ctx.fillStyle=bFront; ctx.beginPath();
+    ctx.moveTo(-12,18); ctx.bezierCurveTo(-15,35,-8,50,0,52); ctx.bezierCurveTo(8,50,15,35,12,18);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+    // dumalla — 8 stacked wrap layers (palas) ramping navy→steel-blue, full ear
+    // coverage, front-centre Chand Tora (Khanda emblem), tucked shastars.
+    const N=8, Wb=headR*2.72, Wp=headR*1.12;
+    const earY=headY+headR*0.06, browY=headY-headR*1.20;   // high rim reveals the eyes
+    // base band (ear coverage, brow rise)
+    ctx.fillStyle=shd(C.turban,0.5); ctx.strokeStyle=shd(C.turban,0.35); ctx.lineWidth=1.2;
+    ctx.beginPath();
+    ctx.moveTo(-Wb/2, earY);
+    ctx.quadraticCurveTo(-Wb/2, headY-headR*0.62, 0, headY-headR*0.72);
+    ctx.quadraticCurveTo(Wb/2, headY-headR*0.62, Wb/2, earY);
+    ctx.quadraticCurveTo(0, browY, -Wb/2, earY);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // stacked palas
+    const D=headR*0.34, hh=headR*0.6;
+    for (let i=1;i<N;i++){ const t=i/(N-1);
+      const by=(headY-headR*0.6)-(i-1)*D, w=Wb*0.98+(Wp-Wb*0.98)*((i-1)/(N-2));
+      ctx.fillStyle=shd(C.turban, 0.66+(1.7-0.66)*t);
+      ctx.strokeStyle=shd(C.turban, 0.45+(1.15-0.45)*t); ctx.lineWidth=1.1;
+      ctx.beginPath();
+      ctx.moveTo(-w/2, by);
+      ctx.bezierCurveTo(-w/2-w*0.02, by-hh*0.9, -w*0.34, by-hh, 0, by-hh);
+      ctx.bezierCurveTo(w*0.34, by-hh, w/2+w*0.02, by-hh*0.9, w/2, by);
+      ctx.quadraticCurveTo(0, by+hh*0.12, -w/2, by);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle="rgba(255,255,255,0.10)"; ctx.lineWidth=0.8;
+      ctx.beginPath(); ctx.moveTo(-w*0.4, by-hh*0.52);
+      ctx.quadraticCurveTo(0, by-hh*0.7, w*0.4, by-hh*0.52); ctx.stroke(); }
+    // Chand Tora — Khanda emblem front-centre
+    const e=headR*0.95, ey=headY-headR*1.05;
+    ctx.fillStyle="#eef2f7"; ctx.strokeStyle="#93a4c2"; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(-e*0.5, ey+e*0.06);
+    ctx.quadraticCurveTo(0, ey+e*0.52, e*0.5, ey+e*0.06);
+    ctx.quadraticCurveTo(0, ey+e*0.30, -e*0.5, ey+e*0.06); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle="#eef2f7"; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(0, ey-e*0.04, e*0.2, 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle="#eef2f7"; ctx.strokeStyle="#718096"; ctx.lineWidth=0.7;
+    ctx.beginPath(); ctx.moveTo(-e*0.055, ey-e*0.62); ctx.lineTo(e*0.055, ey-e*0.62);
+    ctx.lineTo(e*0.045, ey+e*0.16); ctx.lineTo(-e*0.045, ey+e*0.16); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, ey-e*0.82); ctx.lineTo(e*0.075, ey-e*0.6);
+    ctx.lineTo(-e*0.075, ey-e*0.6); ctx.closePath(); ctx.fill();
+    // tucked shastars
+    ctx.save(); ctx.translate(headR*0.66, headY-headR*1.95); ctx.rotate(-0.26);
+    ctx.strokeStyle="#cbd5e1"; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(0,0, headR*0.42, headR*0.15, 0, 0, Math.PI*2); ctx.stroke(); ctx.restore();
+    ctx.strokeStyle="#cbd5e1"; ctx.lineWidth=2.4; ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(-headR*1.05, headY-headR*1.12); ctx.lineTo(-headR*0.82, headY-headR*0.94); ctx.stroke();
+    // farla flourish
+    ctx.fillStyle="#ff9d2e";
+    ctx.beginPath(); ctx.arc(0, headY-headR*3.02, headR*0.24, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  const embers = [];
+  function frame(now) {
+    ctx.clearRect(0, 0, W, H);
+    const cx = W * 0.5, feet = H * 0.9, hgt = H * 0.66;
+    const t = reduce ? 0 : now / 1000;
+
+    // ground line
+    ctx.strokeStyle = "rgba(230,184,69,0.18)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, feet+2); ctx.lineTo(W, feet+2); ctx.stroke();
+
+    drawChakram(cx, feet - hgt * 0.62, hgt * 0.62, t * 0.35);
+    drawAkaal(cx, feet, hgt);
+
+    // drifting gold embers (subtle)
+    if (!reduce) {
+      if (embers.length < 16 && Math.random() < 0.3)
+        embers.push({ x: cx + (Math.random()-0.5)*W*0.6, y: feet, v: 8+Math.random()*18, life: 1 });
+      ctx.save();
+      for (let i = embers.length-1; i >= 0; i--) {
+        const e = embers[i]; e.y -= e.v * 0.016; e.life -= 0.006;
+        if (e.life <= 0) { embers.splice(i,1); continue; }
+        ctx.globalAlpha = e.life * 0.5;
+        ctx.fillStyle = "#ffd47a";
+        ctx.beginPath(); ctx.arc(e.x, e.y, 1.6, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    if (!reduce) requestAnimationFrame(frame);
+  }
+
+  const ro = new ResizeObserver(() => { resize(); if (reduce) frame(0); });
+  ro.observe(canvas);
+  resize();
+  if (reduce) frame(0); else requestAnimationFrame(frame);
+})();
+</script>

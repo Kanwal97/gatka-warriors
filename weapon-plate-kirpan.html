@@ -1,0 +1,484 @@
+<title>Amritvelā — The Defender's Kirpan · Weapon Plate</title>
+<meta name="description" content="Weapon concept plate for Amritvelā, the Damascus Kirpan of Gatka Warriors, with a live render and four animated VFX states." />
+
+<style>
+  /* ---- Shared codex tokens (matches Akaal's dossier) --------------- */
+  :root {
+    --ground:#0b1322; --ground-2:#0e1a30; --panel:#15213c; --panel-2:#1b2a4b;
+    --line:#29395c; --steel:#93a4c2; --steel-dim:#64769a; --parchment:#eaeef6;
+    --saffron:#ff9d2e; --saffron-deep:#e07d13; --gold:#ffd47a; --blade:#cdd8e8;
+    --lapis:#3a6ad0;
+    --maxw:1000px;
+    --serif:"Palatino Linotype","Book Antiqua",Palatino,"URW Palladio L",Georgia,serif;
+    --sans:"Gill Sans MT","Gill Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono:"Consolas","SFMono-Regular",ui-monospace,"Roboto Mono",monospace;
+    --step--1:clamp(0.78rem,0.75rem + 0.15vw,0.86rem);
+    --step-0:clamp(1rem,0.96rem + 0.2vw,1.1rem);
+    --step-1:clamp(1.3rem,1.2rem + 0.5vw,1.6rem);
+    --step-2:clamp(1.8rem,1.5rem + 1.4vw,2.6rem);
+    --step-3:clamp(2.6rem,1.8rem + 4vw,5rem);
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; color:var(--parchment); font-family:var(--sans); font-size:var(--step-0);
+    line-height:1.65; -webkit-font-smoothing:antialiased;
+    background:radial-gradient(120% 80% at 50% -10%, #17264a 0%, var(--ground) 55%, #070d18 100%);
+  }
+  .wrap { max-width:var(--maxw); margin:0 auto; padding:0 24px; }
+  .section { padding:58px 0; border-top:1px solid var(--line); }
+  .eyebrow { display:inline-flex; align-items:center; gap:10px; font-size:var(--step--1);
+    letter-spacing:0.28em; text-transform:uppercase; color:var(--saffron); margin:0 0 18px; }
+  .eyebrow::before { content:""; width:22px; height:2px; background:var(--saffron); }
+  h2.head { font-family:var(--serif); font-weight:700; font-size:var(--step-2); letter-spacing:0.02em;
+    text-transform:uppercase; text-wrap:balance; margin:0 0 20px; }
+  .lede { max-width:64ch; color:var(--steel); font-size:var(--step-1); line-height:1.5; }
+  p { max-width:66ch; } strong { color:var(--parchment); font-weight:600; }
+  em.gur { font-style:normal; color:var(--gold); font-family:var(--serif); }
+
+  /* ---- HERO ---- */
+  .hero { padding-top:44px; }
+  .stage { position:relative; width:100%; aspect-ratio:16/7; border:1px solid var(--line);
+    border-radius:14px; overflow:hidden; background:linear-gradient(180deg,#0d1a32,#070d18);
+    box-shadow:0 30px 80px -30px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.04); }
+  #plateCanvas { display:block; width:100%; height:100%; }
+  .kicker { font-family:var(--sans); letter-spacing:0.4em; text-transform:uppercase;
+    font-size:var(--step--1); color:var(--saffron); margin:26px 0 4px; text-align:center; }
+  .wordmark { font-family:var(--serif); font-weight:700; font-size:var(--step-3); line-height:0.95;
+    letter-spacing:0.05em; text-transform:uppercase; margin:0; text-align:center;
+    text-shadow:0 6px 30px rgba(0,0,0,0.6); }
+  .epithet { text-align:center; font-family:var(--serif); font-style:italic; color:var(--steel);
+    font-size:var(--step-1); margin:10px auto 0; max-width:60ch; }
+
+  /* ---- VFX state timeline (interactive) ---- */
+  .timeline { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:22px; }
+  .state-btn { position:relative; font-family:var(--mono); font-size:var(--step--1); letter-spacing:0.06em;
+    padding:10px 18px 12px; border-radius:10px; border:1px solid var(--line); background:var(--panel);
+    color:var(--steel); cursor:pointer; transition:border-color .15s, color .15s, transform .1s;
+    text-align:left; min-width:150px; }
+  .state-btn:hover { border-color:var(--steel-dim); }
+  .state-btn.active { border-color:var(--saffron); color:var(--parchment);
+    box-shadow:0 0 0 1px var(--saffron), 0 10px 24px -12px rgba(255,157,46,0.5); }
+  .state-btn .n { display:block; font-family:var(--serif); font-size:var(--step-0); color:var(--gold); }
+  .state-btn .d { display:block; color:var(--steel-dim); font-size:0.72rem; margin-top:2px; }
+  .state-btn .prog { position:absolute; left:0; bottom:0; height:2px; width:0; background:var(--saffron);
+    border-radius:0 0 0 10px; }
+  .state-btn:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
+  .hint { text-align:center; color:var(--steel-dim); font-size:var(--step--1); margin-top:12px; }
+
+  /* ---- spec grid ---- */
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:1px;
+    background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .cell { background:var(--panel); padding:22px; }
+  .cell h3 { font-family:var(--serif); font-size:var(--step-1); margin:0 0 2px; color:var(--gold); }
+  .cell .en { font-size:var(--step--1); text-transform:uppercase; letter-spacing:0.16em;
+    color:var(--steel-dim); margin:0 0 10px; }
+  .cell p { margin:0; font-size:var(--step--1); color:var(--steel); max-width:none; }
+
+  /* ---- VFX table ---- */
+  .vfx { width:100%; border-collapse:collapse; font-size:var(--step--1); }
+  .vfx th, .vfx td { text-align:left; padding:14px 16px; border-bottom:1px solid var(--line);
+    vertical-align:top; }
+  .vfx th { color:var(--steel-dim); text-transform:uppercase; letter-spacing:0.14em; font-size:0.72rem;
+    font-weight:600; }
+  .vfx td.state { font-family:var(--serif); color:var(--gold); white-space:nowrap; }
+  .vfx td.trig { color:var(--blade); font-family:var(--mono); font-size:0.78rem; white-space:nowrap; }
+  .vfx td.desc { color:var(--steel); }
+  .vfx-scroll { overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+
+  /* ---- swatches ---- */
+  .swatches { display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); gap:12px; }
+  .sw { border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--panel); }
+  .sw .c { height:66px; } .sw .m { padding:9px 12px; }
+  .sw .nm { font-size:var(--step--1); color:var(--parchment); }
+  .sw .hx { font-family:var(--mono); font-size:0.7rem; color:var(--steel-dim); text-transform:uppercase; }
+
+  /* ---- production notes ---- */
+  .notes { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:24px 26px; }
+  .notes ul { margin:0; padding-left:18px; } .notes li { color:var(--steel); font-size:var(--step--1);
+    margin-bottom:10px; } .notes li b { color:var(--parchment); font-weight:600; }
+  .notes code { font-family:var(--mono); font-size:0.82em; color:var(--gold);
+    background:var(--ground-2); padding:1px 6px; border-radius:5px; }
+
+  .foot { padding:38px 0 60px; border-top:1px solid var(--line); color:var(--steel-dim);
+    font-size:var(--step--1); text-align:center; }
+  .foot b { color:var(--steel); }
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="hero section" style="border-top:0">
+    <div class="stage">
+      <canvas id="plateCanvas" aria-label="Amritvela, a curved Damascus Kirpan, rendered with animated nectar-light VFX."></canvas>
+    </div>
+    <p class="kicker">Gatka Warriors · Hero Weapon</p>
+    <h1 class="wordmark">Amritvelā</h1>
+    <p class="epithet">&ldquo;The Defender&rsquo;s Kirpan — it glows brightest in the ambrosial
+      hours, and remembers every vow sworn over it.&rdquo;</p>
+
+    <!-- Interactive VFX state timeline; also auto-cycles. -->
+    <div class="timeline" id="timeline" role="tablist" aria-label="VFX states"></div>
+    <p class="hint">Select a state to preview its VFX &middot; cycles automatically</p>
+  </header>
+
+  <section class="section">
+    <span class="eyebrow">01 · Blade</span>
+    <h2 class="head">Damascus, Living Steel</h2>
+    <p class="lede" style="margin-bottom:24px">A single-edged, deeply-curved blade of pattern-welded
+      steel — the banding flows <em>with</em> the curve so the eye follows it to the tip.</p>
+    <div class="grid">
+      <div class="cell"><h3>Pattern-weld</h3><p class="en">Wavy Damascus</p>
+        <p>Organic ladder-and-twist banding, cool gunmetal darks against pale silver highs — moody, never chrome-bright.</p></div>
+      <div class="cell"><h3>The Fuller</h3><p class="en">Engraved spine</p>
+        <p>A raised fuller inlaid with geometric, Gurmukhi-inspired jaali lattice — suggesting the sacred rather than counterfeiting scripture.</p></div>
+      <div class="cell"><h3>The Seal</h3><p class="en">Tip emitter</p>
+        <p>The band resolves into a stylised geometric seal near the clip point — the origin of the Amrit-Dhāra light.</p></div>
+      <div class="cell"><h3>Story of wear</h3><p class="en">Aged, fought</p>
+        <p>Temper lines, faint edge-nicks at the belly, and patina settled into the grooves so the pattern reads even unlit.</p></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <span class="eyebrow">02 · Hilt &amp; Guard</span>
+    <h2 class="head">Aged Brass, Quiet Authority</h2>
+    <div class="grid">
+      <div class="cell"><h3>Talwar crossguard</h3><p class="en">Ricasso &amp; quillons</p>
+        <p>Down-swept, bud-tipped quillons in aged brass with a darkened-silver wash pooling in the recesses.</p></div>
+      <div class="cell"><h3>The grip</h3><p class="en">Leather &amp; wire</p>
+        <p>Oxblood leather over twisted brass wire, bound at the collar with a saffron-and-blue thread ferrule.</p></div>
+      <div class="cell"><h3>Disc pommel</h3><p class="en">Lotus &amp; lion</p>
+        <p>A recessed relief: a lotus whose negative space reads a second time as a lion&rsquo;s mane — compassion and ferocity in one carving.</p></div>
+      <div class="cell"><h3>Soul-gem</h3><p class="en">Lapis core</p>
+        <p>A cabochon of blue lapis at the pommel&rsquo;s heart breathes with the buff&rsquo;s charge — where the spirit lives.</p></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <span class="eyebrow">03 · Sheath &amp; Gatra</span>
+    <h2 class="head">The Meyan — Royal Blue &amp; Gold</h2>
+    <div class="grid">
+      <div class="cell"><h3>Meyan</h3><p class="en">Velvet scabbard</p>
+        <p>A wooden body sheathed in deep royal-blue (neelā) velvet — the richest colour in the kit, so the drawn steel reads as release.</p></div>
+      <div class="cell"><h3>Chapa &amp; Mukhi</h3><p class="en">Gold furniture</p>
+        <p>Gold-plated steel tip-cap and mouth-guard, chased to rhyme with the blade; plating worn thin to steel-grey on the high edges.</p></div>
+      <div class="cell"><h3>Gatra</h3><p class="en">Woven baldric</p>
+        <p>A broad woven strap — blue shot with saffron and cream — worn across the chest, with aged-brass ends and a Kara-style ring.</p></div>
+      <div class="cell"><h3>Honest fray</h3><p class="en">Field-worn</p>
+        <p>Edges frayed with use, brass gone matte where the body rubs — carried, not displayed.</p></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <span class="eyebrow">04 · Magical / Gameplay</span>
+    <h2 class="head">Amrit-Dhāra · The Nectar-Stream</h2>
+    <p class="lede" style="margin-bottom:24px">A <strong>spiritual</strong> buff, not elemental —
+      liquid gold light that flows like water. Locked to saffron-gold so it never collides with
+      enemy elemental tells.</p>
+    <div class="vfx-scroll">
+      <table class="vfx">
+        <thead><tr><th>State</th><th>Trigger</th><th>Visual</th></tr></thead>
+        <tbody>
+          <tr><td class="state">Dormant</td><td class="trig">Sheathed</td>
+            <td class="desc">Engraving dark; only a cool rim-light on the steel. The lapis pommel-gem holds a slow, breathing glow.</td></tr>
+          <tr><td class="state">Vigilant</td><td class="trig">Drawn</td>
+            <td class="desc">A thread of saffron-gold wakes in the fuller and drifts toward the tip like a slow current; Damascus bands seem to ripple.</td></tr>
+          <tr><td class="state">Strike</td><td class="trig">On hit</td>
+            <td class="desc">The tip-seal flares; a crescent gold trail follows the arc with fine nectar-sparks at contact.</td></tr>
+          <tr><td class="state">Parry</td><td class="trig">Perfect parry</td>
+            <td class="desc">The whole engraving ignites gold-white for a frame; a radial Amrit burst and light-ring erupt at the clash. The money shot.</td></tr>
+          <tr><td class="state">Amrit Velā</td><td class="trig">Ultimate</td>
+            <td class="desc">Runes run fully molten; liquid afterimages trail every swing and a luminous ribbon lingers in the air. The blade looks alive.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section">
+    <span class="eyebrow">Art Direction</span>
+    <h2 class="head">Material Standard</h2>
+    <div class="swatches" id="swatches"></div>
+  </section>
+
+  <section class="section">
+    <span class="eyebrow">Production</span>
+    <h2 class="head">Pipeline Notes</h2>
+    <div class="notes">
+      <ul>
+        <li><b>Meshes</b> — blade / crossguard / grip / pommel / scabbard / gatra as separate elements; ~<b>18–25k tris</b> at LOD0, disc pommel and chapa on their own material IDs.</li>
+        <li><b>Damascus</b> — tiling flow-mapped <code>normal</code> + <code>roughness</code> pair so the wave animates under the emissive, not baked-in painted highlights.</li>
+        <li><b>Engraving</b> — on a trim sheet shared with the sheath furniture. Two emissive masks: <code>fuller_flow</code> (scrolling) and <code>seal_burst</code> (parry).</li>
+        <li><b>PBR</b> — brass <code>metallic 1.0</code>, <code>rough 0.35–0.6</code> graded by wear; velvet as anisotropic cloth, <code>metallic 0</code>, sheen on.</li>
+        <li><b>Rig hooks</b> — tip-seal socket drives the slash-trail emitter; pommel-gem light intensity is scripted off the Simran / charge value.</li>
+        <li><b>Accessibility</b> — parry-flare duration capped; a reduced-bloom setting honours photosensitivity and <code>prefers-reduced-motion</code>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p><b>Amritvelā — The Defender's Kirpan</b> · Weapon Plate for <b>Gatka Warriors</b><br />
+      Live render · the same drawing language the engine ships · Deg Tegh Fateh</p>
+  </footer>
+</div>
+
+<script>
+/* ---- palette swatches from the material standard ---- */
+const PALETTE = [
+  ["Temper Dark","#1c2230"], ["Polished High","#cdd8e8"], ["Aged Brass","#8a6a2f"],
+  ["Kesari Saffron","#ff9d2e"], ["Farla Gold","#ffd47a"], ["Neelā Velvet","#12245a"],
+  ["Lapis Core","#1f3f7a"],
+];
+const swEl = document.getElementById("swatches");
+for (const [nm, hx] of PALETTE) {
+  const d = document.createElement("div"); d.className = "sw";
+  d.innerHTML = '<div class="c" style="background:'+hx+'"></div><div class="m"><div class="nm">'+nm+'</div><div class="hx">'+hx+'</div></div>';
+  swEl.appendChild(d);
+}
+
+/* ============================================================
+   VFX state machine + live Kirpan render.
+   ============================================================ */
+const STATES = [
+  { key:"Dormant",  d:"engraving dark",  glow:0.0,  flare:0.0 },
+  { key:"Vigilant", d:"current wakes",   glow:0.38, flare:0.0 },
+  { key:"Strike",   d:"tip-seal flare",  glow:0.72, flare:0.0 },
+  { key:"Parry",    d:"full ignite",     glow:1.0,  flare:1.0 },
+];
+const AUTO_MS = 3000;
+let idx = 1, stateStart = 0, pausedUntil = 0, now = 0;
+const sparks = [];
+
+/* Build the timeline control. */
+const tl = document.getElementById("timeline");
+const btns = STATES.map((s, i) => {
+  const b = document.createElement("button");
+  b.className = "state-btn" + (i === idx ? " active" : "");
+  b.type = "button"; b.setAttribute("role", "tab");
+  b.innerHTML = '<span class="n">'+s.key+'</span><span class="d">'+s.d+'</span><span class="prog"></span>';
+  b.addEventListener("click", () => { setState(i, true); });
+  tl.appendChild(b);
+  return b;
+});
+function setState(i, manual) {
+  idx = i; stateStart = now;
+  if (manual) pausedUntil = now + 9000;
+  btns.forEach((b, k) => b.classList.toggle("active", k === idx));
+  if (idx === 2 || idx === 3) spawnSparks(idx === 3 ? 34 : 14);
+  if (reduce) draw(now); // reduced-motion: repaint on demand
+}
+
+const canvas = document.getElementById("plateCanvas");
+const ctx = canvas.getContext("2d");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let W = 0, H = 0, dpr = 1;
+function resize() {
+  const r = canvas.getBoundingClientRect();
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  W = r.width; H = r.height;
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+/* quadratic bezier point — used to send the "current" along the fuller */
+/* Cubic Bezier point at u — samples the reference fuller / centreline. */
+function cb3(a, b, c, d, u) {
+  const v = 1 - u;
+  return v*v*v*a + 3*v*v*u*b + 3*v*u*u*c + u*u*u*d;
+}
+function qb(p0, p1, p2, u) {
+  const m = 1 - u;
+  return { x: m*m*p0.x + 2*m*u*p1.x + u*u*p2.x, y: m*m*p0.y + 2*m*u*p1.y + u*u*p2.y };
+}
+function spawnSparks(n) {
+  const cx = W*0.5, tipx = W*0.5 + W*0.34, tipy = H*0.5 - 26;
+  for (let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2, sp = 40 + Math.random()*220;
+    sparks.push({ x:tipx, y:tipy, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - 30,
+      life:0.4+Math.random()*0.5, max:0.9, tint: Math.random()<0.5?"#ffe9a8":"#fff4d6" });
+  }
+}
+
+/* Draw Amritvelā centred, pointing right. */
+function drawSword(glow, flare, t) {
+  const cy = H*0.5;
+  const swordLen = Math.min(W*0.82, 760);
+  const hiltLen = swordLen*0.26, bladeLen = swordLen*0.74;
+  const x0 = (W - swordLen)/2 + hiltLen;   // hand pivot; blade goes right from x0
+  // BLADE GEOMETRY — ported 1:1 from the reference kirpan SVG, not authored.
+  // Reference is in CENTIMETRES with y DOWN: overall 78.7cm (31in), hilt 0–15.2
+  // (6in), blade 15.2–78.7 (63.5cm = 25in); the hand axis sits at y = 7.15.
+  // THE BEND BELONGS AT THE SPIKE: the cutting edge leaves the guard at −0.3° and
+  // reaches the tip at 12.4°. Flat where it is held, bending up at the point.
+  // The centreline therefore sits BELOW the hilt→tip chord — concave-up, because
+  // the convex side IS the cutting edge and it faces down. Do not "correct" that.
+  // Keep these cm numbers verbatim; earlier hand-authored controls got it backwards.
+  const sc = bladeLen/63.5;                     // cm → px
+  const RX = (c) => x0 + (c - 15.2)*sc;
+  const RY = (c) => cy + (c - 7.15)*sc;
+  const tip     = { x:RX(78.7), y:RY(3.2) };
+  const spineP1 = { x:RX(35),   y:RY(5.6)  };
+  const spineP2 = { x:RX(58),   y:RY(4.7)  };
+  const bellyP1 = { x:RX(60),   y:RY(7.3)  };
+  const bellyP2 = { x:RX(36),   y:RY(8.35) };
+  const p0s     = { x:RX(15.2), y:RY(6.2)  };
+  // Fuller groove from the reference; doubles as the blade centreline, so the
+  // banding, the engraving and the Amrit-Dhara glow all ride the one arc.
+  const FUL = [[17,6.95],[37,6.5],[56,5.7],[73.5,4.35]];
+  const fulPt = (u) => ({
+    x: cb3(RX(FUL[0][0]), RX(FUL[1][0]), RX(FUL[2][0]), RX(FUL[3][0]), u),
+    y: cb3(RY(FUL[0][1]), RY(FUL[1][1]), RY(FUL[2][1]), RY(FUL[3][1]), u),
+  });
+  const fulStroke = (dy) => {
+    ctx.beginPath();
+    for (let u=0; u<=1.001; u+=0.05) { const q=fulPt(u);
+      if (u===0) ctx.moveTo(q.x, q.y+(dy||0)); else ctx.lineTo(q.x, q.y+(dy||0)); }
+    ctx.stroke();
+  };
+
+  // ambient pedestal glow
+  const ped = ctx.createRadialGradient(W*0.5, cy, 20, W*0.5, cy, W*0.5);
+  ped.addColorStop(0, "rgba(69,120,230,0.06)"); ped.addColorStop(1, "rgba(69,120,230,0)");
+  ctx.fillStyle = ped; ctx.fillRect(0,0,W,H);
+
+  // ---- hilt: grip, wire, disc pommel (lotus/lion), crossguard ----
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#3a2a18"; ctx.lineWidth = 15;
+  ctx.beginPath(); ctx.moveTo(x0 - hiltLen*0.72, cy + 6); ctx.lineTo(x0 - 6, cy); ctx.stroke();
+  ctx.strokeStyle = "rgba(200,160,80,0.5)"; ctx.lineWidth = 2; // wire wrap
+  for (let i=0;i<7;i++){ const xx = x0 - hiltLen*0.66 + i*(hiltLen*0.5/7);
+    ctx.beginPath(); ctx.moveTo(xx, cy+11-i*0.4); ctx.lineTo(xx+7, cy-1-i*0.4); ctx.stroke(); }
+  // disc pommel
+  const pmx = x0 - hiltLen*0.78, pmy = cy + 7, pr = hiltLen*0.26;
+  const bg = ctx.createRadialGradient(pmx-pr*0.3, pmy-pr*0.3, pr*0.2, pmx, pmy, pr);
+  bg.addColorStop(0, "#c8a24e"); bg.addColorStop(1, "#5c451f");
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(pmx, pmy, pr, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#3a3226"; ctx.lineWidth = 2; ctx.stroke();
+  // lotus petals relief
+  ctx.strokeStyle = "rgba(30,24,14,0.6)"; ctx.lineWidth = 1.4;
+  for (let i=0;i<8;i++){ const a=i/8*Math.PI*2;
+    ctx.beginPath(); ctx.ellipse(pmx+Math.cos(a)*pr*0.42, pmy+Math.sin(a)*pr*0.42, pr*0.30, pr*0.14, a, 0, Math.PI*2); ctx.stroke(); }
+  // lapis soul-gem (breathes)
+  ctx.globalAlpha = 0.55 + 0.45*Math.sin(t*3);
+  const lg = ctx.createRadialGradient(pmx, pmy, 0, pmx, pmy, pr*0.32);
+  lg.addColorStop(0, "#6fa8ff"); lg.addColorStop(1, "#1f3f7a");
+  ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(pmx, pmy, pr*0.30, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+  // crossguard
+  ctx.strokeStyle = "#e6c877"; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.moveTo(x0, cy-20); ctx.quadraticCurveTo(x0-6, cy, x0, cy+20); ctx.stroke();
+
+  // ---- blade body (filled, curved) ----
+  const bladePath = () => {
+    ctx.beginPath();
+    ctx.moveTo(RX(15.2), RY(6.2));
+    ctx.bezierCurveTo(spineP1.x, spineP1.y, spineP2.x, spineP2.y, tip.x, tip.y);        // spine → tip
+    ctx.bezierCurveTo(bellyP1.x, bellyP1.y, bellyP2.x, bellyP2.y, RX(15.2), RY(8.25));  // belly (edge) → guard
+    ctx.closePath();
+  };
+  const steel = ctx.createLinearGradient(x0, cy-30, tip.x, cy);
+  steel.addColorStop(0, "#39445e"); steel.addColorStop(0.5, "#cdd8e8"); steel.addColorStop(1, "#5c6f8c");
+  bladePath(); ctx.fillStyle = steel; ctx.fill();
+
+  // ---- Damascus banding (clipped) ----
+  ctx.save(); bladePath(); ctx.clip();
+  for (let i=0;i<7;i++){
+    const off = (-3 + i) * sc * 0.30;      // in cm-scale, so it tracks the real width
+    ctx.strokeStyle = i%2 ? "rgba(28,34,48,0.55)" : "rgba(190,205,228,0.4)";
+    ctx.lineWidth = 2.2;
+    fulStroke(off);
+  }
+  ctx.restore();
+
+  // ---- spine engraving ticks ----
+  ctx.strokeStyle = "rgba(16,20,28,0.7)"; ctx.lineWidth = 1.4;
+  for (let u=0.1; u<0.92; u+=0.055){
+    const q = fulPt(u);
+    ctx.beginPath(); ctx.moveTo(q.x, q.y-2); ctx.lineTo(q.x+2, q.y+6); ctx.stroke();
+  }
+
+  // ---- strike crescent trail ----
+  if (glow >= 0.7) {
+    ctx.save(); ctx.globalAlpha = 0.20*glow; ctx.strokeStyle = "#ffd47a";
+    ctx.lineWidth = 14; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.arc(x0-6, cy+8, bladeLen*0.82, -0.62, 0.08); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---- Amrit-Dhāra emissive: fuller glow + travelling current + tip seal ----
+  if (glow > 0) {
+    const hot = flare > 0.5;
+    ctx.save();
+    ctx.globalAlpha = Math.min(glow, 1);
+    ctx.shadowColor = hot ? "#fff4d6" : "#ffd47a"; ctx.shadowBlur = 10 + glow*16;
+    ctx.strokeStyle = hot ? "#fff4d6" : "#ffd47a"; ctx.lineWidth = 2.6;
+    fulStroke(0);
+    // travelling "current" bead toward the tip
+    const u = ((t*0.5) % 1);
+    const q = fulPt(u);
+    ctx.fillStyle = "#fff4d6"; ctx.globalAlpha = Math.min(glow,1)*(1-u)*0.9;
+    ctx.beginPath(); ctx.arc(q.x, q.y, 3.4, 0, Math.PI*2); ctx.fill();
+    // tip seal
+    ctx.globalAlpha = Math.min(glow,1); ctx.fillStyle = ctx.strokeStyle;
+    ctx.beginPath(); ctx.arc(tip.x-4, tip.y-1, 2.4 + glow*3, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  // ---- full ignite + burst ring on parry ----
+  if (flare > 0) {
+    ctx.save();
+    ctx.globalAlpha = flare; ctx.shadowColor = "#fff4d6"; ctx.shadowBlur = 22;
+    ctx.strokeStyle = "#fff4d6"; ctx.lineWidth = 2; bladePath(); ctx.stroke();
+    // expanding light-ring at the tip, keyed to how long we've been in parry
+    const el = Math.max(0, (now - stateStart)/1000);
+    const rr = 12 + el*260, ra = Math.max(0, 0.7 - el*1.1);
+    if (ra > 0) {
+      ctx.globalAlpha = ra; ctx.shadowBlur = 12; ctx.lineWidth = 3;
+      ctx.strokeStyle = "#ffe9a8";
+      ctx.beginPath(); ctx.arc(tip.x-4, tip.y-1, rr, 0, Math.PI*2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function drawSparks(dt) {
+  for (let i=sparks.length-1;i>=0;i--){
+    const s = sparks[i];
+    s.vy += 520*dt; s.x += s.vx*dt; s.y += s.vy*dt; s.vx *= 0.98; s.life -= dt;
+    if (s.life <= 0){ sparks.splice(i,1); continue; }
+    ctx.globalAlpha = Math.max(0, s.life/s.max); ctx.fillStyle = s.tint;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 2, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+let lastT = 0;
+function draw(nowMs) {
+  const dt = Math.min(0.05, (nowMs - lastT)/1000 || 0); lastT = nowMs;
+  now = nowMs; const t = reduce ? 1.2 : nowMs/1000;
+  ctx.clearRect(0,0,W,H);
+
+  const s = STATES[idx];
+  // ease glow in on entry for a smoother state change
+  const ease = reduce ? 1 : Math.min(1, (now - stateStart)/350);
+  const glow = s.glow * ease;
+  const flare = s.flare * Math.max(0, 1 - (now - stateStart)/700); // flare decays after entry
+
+  drawSword(glow, flare, t);
+  if (!reduce) drawSparks(dt);
+
+  // timeline progress bar + auto-advance
+  if (!reduce) {
+    const prog = Math.min(1, (now - stateStart) / AUTO_MS);
+    btns[idx].querySelector(".prog").style.width = (prog*100).toFixed(1) + "%";
+    btns.forEach((b,k)=>{ if(k!==idx) b.querySelector(".prog").style.width = "0"; });
+    if (now > pausedUntil && now - stateStart >= AUTO_MS) setState((idx+1) % STATES.length, false);
+    requestAnimationFrame(draw);
+  }
+}
+
+const ro = new ResizeObserver(() => { resize(); if (reduce) draw(now); });
+ro.observe(canvas);
+resize();
+stateStart = 0;
+if (reduce) { idx = 1; setState(1, false); draw(0); }
+else requestAnimationFrame((ts) => { stateStart = ts; lastT = ts; draw(ts); });
+</script>
