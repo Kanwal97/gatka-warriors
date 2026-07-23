@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Gatka Warriors</title>
 
 <!-- Traditional-styled display font for banners/titles. Falls back gracefully offline. -->
@@ -50,6 +50,7 @@
   #stage {
     position: relative;
     width: min(1280px, 96vw, calc((100vh - 44px) * 1.8));
+    width: min(1280px, 96vw, calc((100dvh - 44px) * 1.8));   /* dvh: no mobile URL-bar jump */
     margin: 18px auto;
     box-shadow: 0 0 0 3px var(--saffron-dim), 0 18px 60px rgba(0, 0, 0, 0.7);
     border-radius: 10px;
@@ -227,9 +228,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    /* Centre when it fits, but NEVER hide content above/below the fold when it
+       doesn't: `safe center` falls back to start alignment on overflow so every
+       button stays reachable. The plain `center` line keeps old browsers centred. */
     justify-content: center;
+    justify-content: safe center;
     gap: 22px;
+    padding: 16px;
     text-align: center;
+    overflow-y: auto;                       /* the overlay itself can scroll to any button */
+    -webkit-overflow-scrolling: touch;
     background: linear-gradient(180deg, rgba(10, 6, 2, 0.86), rgba(10, 6, 2, 0.94));
     backdrop-filter: blur(2px);
     z-index: 10;
@@ -488,6 +496,69 @@
     border-radius: 4px;
     padding: 1px 7px;
     color: var(--gold);
+  }
+
+  /* ============================================================
+     MOBILE / NARROW — menus break out of the short game strip
+     ------------------------------------------------------------
+     On a phone the canvas is a short landscape strip, so an overlay pinned to
+     `inset:0` inside it is only ~200px tall and its buttons fall off the bottom
+     with nowhere to scroll. Here the menus are pinned to the FULL VIEWPORT
+     instead, so they always have room and scroll to every button. The inner
+     "pin the buttons, scroll one panel" trick (great on desktop) is unpinned —
+     on touch it is simpler and more reliable to let the whole overlay scroll.
+     ============================================================ */
+  @media (pointer: coarse), (max-width: 860px), (max-height: 560px) {
+    .overlay {
+      position: fixed;            /* cover the screen, not the short game box */
+      inset: 0;
+      justify-content: safe center;
+      padding: calc(14px + env(safe-area-inset-top)) 16px
+               calc(14px + env(safe-area-inset-bottom));
+    }
+    /* These two set their own `justify-content: center` (id specificity), which
+       would beat the base `safe center` even here and re-clip tall content — so
+       restate safe-center for them on mobile. */
+    #menu-main, #menu-select { justify-content: center; justify-content: safe center; }
+    /* Main menu: it is a left-aligned hero on desktop; centre it on a phone. */
+    #menu-main {
+      align-items: center; text-align: center;
+      padding-left: 16px; padding-right: 16px;
+      background: linear-gradient(180deg, rgba(10, 6, 2, 0.92), rgba(10, 6, 2, 0.96));
+    }
+    #menu-main .copy { width: min(430px, 92vw); max-height: none; align-items: center; }
+    #menu-main .copy > .codex { flex: 0 0 auto; }
+    #menu-main .title { font-size: 44px; }
+    #menu-main .onkar { font-size: 38px; }
+    /* Unpin the inner scroll panels (they size to content and the whole overlay
+       scrolls) instead of each being a `flex:1` panel that scrolls on its own. */
+    .codex .controls { flex: 0 0 auto; overflow: visible; max-height: none; border-left: none; padding-left: 0; }
+    #menu-pause .keymap, #menu-guide .guide-body-wrap { flex: 0 0 auto; overflow: visible; max-height: none; }
+    #menu-pause .keymap { max-width: none; }
+    #menu-pause, #menu-guide { justify-content: safe center; }
+    /* Give the game strip the top of the screen so it is not behind the controls. */
+    #stage { margin: 6px auto; }
+  }
+
+  /* ============================================================
+     TOUCH DEVICES — pin the on-screen controls to the screen corners
+     ------------------------------------------------------------
+     The game strip may sit anywhere in the viewport, but thumbs live at the
+     phone's bottom corners — so the D-pad / action cluster and the corner
+     toggles pin to the VIEWPORT, not to the (short) game box. Only on real
+     touch pointers, so a narrow desktop window is unaffected.
+     ============================================================ */
+  @media (pointer: coarse) {
+    .touch {
+      position: fixed;
+      padding: 10px calc(10px + env(safe-area-inset-right))
+               calc(10px + env(safe-area-inset-bottom))
+               calc(10px + env(safe-area-inset-left));
+    }
+    .hud-btn { position: fixed; }
+    #mute        { top: calc(10px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); }
+    #tpad-toggle { top: calc(10px + env(safe-area-inset-top)); right: calc(52px + env(safe-area-inset-right)); }
+    #pause-btn   { top: calc(10px + env(safe-area-inset-top)); right: calc(92px + env(safe-area-inset-right)); }
   }
 </style>
 </head>
