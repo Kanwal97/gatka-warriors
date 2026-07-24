@@ -376,3 +376,43 @@ console.log(String.fromCharCode(10)+(fails?fails+' FAILING':'ALL PASS'));
   window.__GATKA_LOWPERF__ = false; g._bindTouch();
 }
 console.log(String.fromCharCode(10)+(fails?fails+' FAILING':'ALL PASS'));
+
+// ---- 14. THE VAAR SWING: a strike moves the blade EVERY time (no sticking) ----
+// The old strike eased to a static pose and held it — invisible whenever the idle
+// whirl had already parked the blade near that pose ("the sword sticks"). The new
+// deterministic arc must produce a real swing from ANY starting angle and vector.
+{
+  g.playerWeaponId='kirpan'; g._startMatch(true);
+  const p = g.player, foe = g.enemy;
+  const starts = [-2.6, -0.9, 0.0, 0.6, 1.9, 3.0];   // varied pre-strike whirl angles
+  const cases = [['HIGH', MOVES.kirpan.jUp], ['MID', MOVES.kirpan.jMid]];
+  let worstPeak = Infinity, worstCase = '';
+  for (const [label, move] of cases) {
+    for (const s of starts) {
+      p.action = ACT.IDLE; p.weaponAngle = s; p.whirlPhase = s; p.weaponMomentum = 0;
+      p.startAttack(move);
+      let peak = 0;
+      for (let i = 0; i < 50 && p.action === ACT.ATTACK; i++) {
+        p.update(1/60, foe);
+        if (p.attackPhase === 'active') peak = Math.max(peak, Math.abs(p.weaponAngVel));
+      }
+      if (peak < worstPeak) { worstPeak = peak; worstCase = label + ' from ' + s.toFixed(1); }
+    }
+  }
+  // A stuck blade would peak ~0; a real swing sweeps ~1+ rad over the active window.
+  check('every strike swings the blade (no sticking) from any start angle/vector',
+        worstPeak > 0.08,
+        'worst active peak |angVel|=' + worstPeak.toFixed(3) + ' (' + worstCase + ')');
+
+  // And the swing genuinely passes near the tuned hitbox pose during active.
+  p.action = ACT.IDLE; p.weaponAngle = 2.0; p.whirlPhase = 2.0; p.weaponMomentum = 0;
+  p.startAttack(MOVES.kirpan.jMid);
+  let nearest = Infinity;
+  for (let i = 0; i < 50 && p.action === ACT.ATTACK; i++) {
+    p.update(1/60, foe);
+    if (p.attackPhase === 'active') nearest = Math.min(nearest, Math.abs(p.weaponAngle - 0.0));
+  }
+  check('the swing passes through the MID strike pose (blade meets the hitbox)',
+        nearest < 0.25, 'closest approach to pose 0.0 = ' + nearest.toFixed(3) + ' rad');
+}
+console.log(String.fromCharCode(10)+(fails?fails+' FAILING':'ALL PASS'));

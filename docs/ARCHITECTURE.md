@@ -136,11 +136,39 @@ Phones lagged badly, from a few avoidable costs — all now addressed:
   `__GATKA_LOWPERF__` global forces it on for testing.
 - The rAF loop is **bound once** (`this._frameBound`), not re-bound every frame.
 
+- **Background cache.** On `LOW_PERF`, `Game._buildBgCache()` renders the chhaoni once
+  to an offscreen canvas (design-space 900×500) and `_render` **blits it** each frame
+  instead of re-drawing gradients + rampart + tents + rack + drum. The ambient
+  flicker/flag/drum freeze on mobile; the rhythm still reads via the per-fighter beat
+  ring + HUD pips. Desktop keeps the live animated background.
+
 **Touch controls** are trimmed to fewer buttons: the three Simran abilities live in a
 pop-up **tray** behind one `✦` toggle (wired in `_bindTouch`; auto-collapses after an
 ability fires and whenever the pad hides), so the pad shows ~8 persistent keys, not 11.
 Each tray button keeps its `data-key`, so `InputManager` and every combat rule are
-unchanged. Guarded by `tests/verify.js` §13 (LOW_PERF render path).
+unchanged. Keys are large (64px on touch), with **instant press feedback** via `.on`
+*and* a `:active` CSS fallback (never waits on the game loop). Guarded by
+`tests/verify.js` §13 (LOW_PERF render path).
+
+## The vaar swing (strike animation)
+
+A strike is **not** "ease the blade to a pose and hold" — that read as the blade
+*sticking*, and was invisible whenever the continuous idle whirl had already parked the
+blade near that pose (intermittent "the sword doesn't move"). Instead
+`Fighter._integrateWeapon` drives a **deterministic, phase-clocked arc** from the
+`STRIKE_ARC` table (per vector: `back` → `strike` → `follow`), matching game-animation
+principles (anticipation → fast arc through the zone → follow-through, fast-in/slow-out):
+
+- **windup:** ease from `swingFrom` (captured at strike start) → `back` (anticipation).
+- **active:** accelerate `back → follow` (ease-in whip), passing *through* the tuned
+  `strike` pose while the hitbox is live.
+- **recovery:** ease `follow → REST_ANGLE` (slow-out weight), blending into the whirl.
+
+Because it always starts from `back`, the swing reads the **same every time**,
+independent of the pre-strike whirl angle — no more sticking. Combat hitboxes/timings
+are untouched (only the *drawn* blade). The **Chakkar** multi-hit barrier keeps its
+momentum spin. Guarded by `tests/verify.js` §14 (a strike moves the blade from any
+start angle/vector; the swing passes through the strike pose).
 
 ## Testing: headless harness
 

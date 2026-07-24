@@ -104,6 +104,24 @@ two-handed with no shield** (`twoHanded: true`; off-hand drawn on the hilt). Res
 panthra is "flowing, non-stop movement with no preset moves"; sword+shield is the
 Gatka pairing; khanda is clasped two-handed (SikhiWiki / gatkaa.com / ismaa.net).
 
+## Strike swing fix + button restyle + bg cache (2026-07-24)
+
+Users: still lagging on buttons + "when you strike, on some the sword sticks and
+won't move." Root cause of the stick: the strike **eased the blade to a static pose
+and held it** — invisible whenever the continuous whirl had already parked the blade
+near that pose (intermittent). Fixes:
+- **Deterministic vaar swing.** New `STRIKE_ARC` table (per vector: `back`/`strike`/
+  `follow`) + `REST_ANGLE`; `Fighter._integrateWeapon` now drives a phase-clocked arc
+  for strikes (anticipation → whip through the zone → follow-through, fast-in/slow-out),
+  starting from `swingFrom` (captured in `startAttack`). Reads the SAME from any whirl
+  angle → no sticking. Hitboxes/timings unchanged; Chakkar keeps its spin. verify.js §14.
+- **Background offscreen cache** on `LOW_PERF` (`_buildBgCache` + blit in `_render`) —
+  stops re-drawing the chhaoni 60×/s on phones. Ambient anim freezes on mobile only.
+- **Button restyle:** 64px keys, gradient "gamepad" look, bigger D-pad arrows, STRIKE
+  emphasized, and INSTANT press feedback via `.on` + a `:active` CSS fallback.
+- Research: game-animation (anticipation/follow-through/smear) + mobile touch UI
+  (large targets, instant feedback, fewer buttons). Desktop/keyboard/tests untouched.
+
 ## Mobile performance + fewer buttons (2026-07-24)
 
 Users reported lag on touch and too many buttons. Fixed:

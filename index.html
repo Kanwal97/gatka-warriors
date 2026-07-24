@@ -182,45 +182,59 @@
     touch-action: none;          /* stop the browser panning/zooming mid-fight */
     -webkit-tap-highlight-color: transparent;
     user-select: none;
-    font-family: "Cinzel", serif; font-size: 11px; font-weight: 700;
+    position: relative;
+    font-family: "Cinzel", serif; font-size: 12px; font-weight: 700;
     letter-spacing: 0.5px; line-height: 1;
     color: var(--gold);
-    background: rgba(20, 12, 5, 0.7);
-    border: 1.5px solid var(--saffron-dim);
-    border-radius: 12px;
-    width: 52px; height: 52px;
+    /* A raised, tactile "gamepad" key: soft top highlight + drop shadow. No
+       backdrop-filter (blurring the live canvas behind 11 keys every frame is the
+       main mobile jank source — a solid gradient reads better and costs nothing). */
+    background: linear-gradient(180deg, rgba(48, 30, 13, 0.9), rgba(18, 11, 4, 0.9));
+    border: 2px solid var(--saffron-dim);
+    border-radius: 14px;
+    width: 56px; height: 56px;
     display: flex; align-items: center; justify-content: center;
-    /* No backdrop-filter: blurring the live canvas behind 11 buttons every frame
-       is the main mobile jank source. A more opaque fill reads just as well. */
-    transition: background 0.06s linear, transform 0.06s linear;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 212, 121, 0.15);
+    /* Fast so the press reads INSTANTLY, never waiting on a janky frame. */
+    transition: transform 0.04s linear, filter 0.04s linear, box-shadow 0.04s linear;
   }
-  .tkey.on {
-    background: rgba(255, 157, 46, 0.55);
-    color: var(--bg-0); border-color: var(--gold);
-    transform: scale(0.94);
+  /* PRESSED — driven by JS (`.on`) AND the CSS `:active` fallback, so the button
+     always lights up the moment it is touched, independent of the game loop. It
+     brightens the key's OWN colour (keeps its identity) rather than flattening to
+     one colour, and adds a clear glow ring + press-in scale. */
+  .tkey.on, .tkey:active {
+    transform: scale(0.9);
+    filter: brightness(1.6) saturate(1.15);
+    box-shadow: 0 0 0 3px rgba(255, 212, 121, 0.6), 0 2px 12px rgba(255, 157, 46, 0.55);
   }
   /* left cluster: the Pentra cross — move on X, attack/guard vector on Y */
-  .tpad { grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(2, 52px); }
+  .tpad { grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(2, 56px); }
   .tpad .k-up    { grid-area: 1 / 2; }
   .tpad .k-left  { grid-area: 2 / 1; }
   .tpad .k-down  { grid-area: 2 / 2; }
   .tpad .k-right { grid-area: 2 / 3; }
   .tpad .k-jump  { grid-area: 1 / 3; }
+  /* Directional keys read as ARROWS — big and glanceable, not tiny glyphs. */
+  .tpad .k-up, .tpad .k-down, .tpad .k-left, .tpad .k-right { font-size: 24px; }
   /* right cluster: STEP/GUARD/STRIKE under the thumb, the ✦ abilities toggle above
      STRIKE. The three abilities themselves live in a pop-up tray, not the grid. */
-  .tacts { position: relative; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(2, 52px); }
+  .tacts { position: relative; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(2, 56px); }
   .tacts .k-abil   { grid-area: 1 / 3; }
   .tacts .k-dodge  { grid-area: 2 / 1; }
   .tacts .k-guard  { grid-area: 2 / 2; }
   .tacts .k-strike { grid-area: 2 / 3; }
-  .tkey.k-strike { background: rgba(192, 57, 43, 0.6); border-color: var(--blood); }
-  .tkey.k-guard  { background: rgba(42, 111, 79, 0.6); border-color: #2a6f4f; }
+  /* STRIKE is the most-used action → the most prominent key: vivid, bold, ringed. */
+  .tkey.k-strike {
+    background: linear-gradient(180deg, #e0533b, #a3241a);
+    border-color: #ff8a6a; color: #fff2ee; font-size: 13px;
+    box-shadow: 0 2px 8px rgba(192, 57, 43, 0.55), inset 0 1px 0 rgba(255, 220, 210, 0.3);
+  }
+  .tkey.k-guard  { background: linear-gradient(180deg, #327f5c, #1c4d36); border-color: #6fd6a2; }
   /* The step is the art's FIRST answer, not a footnote — colour it like the
      EVADE! it produces, and put it under the thumb beside GUARD. */
-  .tkey.k-dodge  { background: rgba(123, 224, 166, 0.5); border-color: #7be0a6; color: #d8fff0; }
+  .tkey.k-dodge  { background: linear-gradient(180deg, #7be0a6, #3f9e72); border-color: #d8fff0; color: #06301f; }
   /* The ✦ toggle for the abilities tray. */
-  .tkey.k-abil   { background: rgba(138, 90, 21, 0.7); border-color: var(--gold); color: var(--gold); font-size: 20px; }
-  .tkey.k-abil.on { background: rgba(255, 157, 46, 0.6); color: var(--bg-0); }
+  .tkey.k-abil   { background: linear-gradient(180deg, #caa24a, #8a5a15); border-color: var(--gold); color: #1a0f05; font-size: 22px; }
   /* ABILITIES TRAY — pops up above the cluster, right-aligned, stacked; hidden
      until the ✦ is tapped, and auto-collapses after an ability fires (see game.js). */
   .ability-tray {
@@ -573,9 +587,11 @@
     #mute        { top: calc(10px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); }
     #tpad-toggle { top: calc(10px + env(safe-area-inset-top)); right: calc(52px + env(safe-area-inset-right)); }
     #pause-btn   { top: calc(10px + env(safe-area-inset-top)); right: calc(92px + env(safe-area-inset-right)); }
-    /* Bigger tap targets on a real touch screen (fewer, larger buttons). */
-    .tpad, .tacts { grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(2, 58px); }
-    .tkey { width: 58px; height: 58px; font-size: 11.5px; }
+    /* Bigger tap targets on a real touch screen — large, generous keys register
+       reliably (research: >=48px; these are 64px) and are easy to hit under a thumb. */
+    .tpad, .tacts { grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 64px); gap: 9px; }
+    .tkey { width: 64px; height: 64px; font-size: 12.5px; }
+    .tpad .k-up, .tpad .k-down, .tpad .k-left, .tpad .k-right { font-size: 27px; }
   }
 </style>
 </head>

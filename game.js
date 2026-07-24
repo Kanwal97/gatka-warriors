@@ -408,6 +408,22 @@ const PENTRA = {
 // becomes the eight's waist — a real arm position, blade drawn back across the body.
 const ATTHHA = Object.freeze({ cx: 0.50, w: 0.62, h: 1.15 });
 
+// THE VAAR SWING ARC — how the drawn blade travels through a strike, per vector.
+// A strike is NOT "ease to a pose and hold" (that read as the blade STICKING, and
+// worse it was invisible whenever the idle whirl had already parked the blade near
+// the pose). It is a proper swing: pull BACK (anticipation), sweep THROUGH the
+// strike zone to a FOLLOW-through past it, then a slow settle (weight). `strike` is
+// the old tuned, hitbox-aligned pose kept as the arc's midpoint; because the swing
+// always starts from `back`, it reads the SAME every time regardless of the whirl.
+// Angles are in the arm's local frame (see _targetArmAngle / ATTHHA); the rest
+// pose the settle returns to is REST_ANGLE. Single source of truth for the swing.
+const REST_ANGLE = -0.35;
+const STRIKE_ARC = Object.freeze({
+  [VECTOR.HIGH]: { back:  0.55, strike: -0.9, follow: -1.35 },  // overhead chop, down-through
+  [VECTOR.MID]:  { back: -1.15, strike:  0.0, follow:  0.6  },  // horizontal cleave across
+  [VECTOR.LOW]:  { back: -1.0,  strike:  0.6, follow:  1.05 },  // rising cut
+});
+
 // Lip palette. Deliberately VIVID, and deliberately NOT seated into the beard.
 // An earlier pass mix()'d these into the beard's shadow so the mouth would "sit
 // in" it — and the mouth vanished. The lips are surrounded by near-black hair
@@ -1676,6 +1692,7 @@ class Fighter {
     // and it drives the visible smear so the whole motion reads.
     this.whirlPhase = -0.35;
     this.weaponAngVel = 0;
+    this.swingFrom = -0.35;   // blade angle captured at the start of a strike swing
 
     // Vertical physics (jumping Pentra)
     this.vy = 0;
@@ -1734,6 +1751,9 @@ class Fighter {
     this.action = ACT.ATTACK; this.curMove = move; this.vector = move.zone;
     this.attackPhase = "windup"; this.phaseT = 0;
     this.hitCount = 0; this.hitTimer = 0; this.canCancel = false;
+    // Where the blade is RIGHT NOW — the windup anticipation eases from here to the
+    // wound-back pose, so the swing is continuous from wherever the whirl left it.
+    this.swingFrom = this.weaponAngle;
     // Inject swing momentum — bigger on the beat and while in FLOW (PERFECT_FLOW).
     const boost = (this.onBeat ? 0.45 : 0.25) * (this.inFlow ? 1.3 : 1);
     this.weaponMomentum += (move.zone === VECTOR.HIGH ? -boost : boost);
@@ -1931,53 +1951,74 @@ class Fighter {
     // motion). `whirlPhase` advances at the weapon's own tempo and becomes the
     // pose target, so IDLE/WALK/STEP are a live whirl instead of a ±0.06 twitch.
     const prevAngle = this.weaponAngle;
-    const ready = this.action === ACT.IDLE || this.action === ACT.WALK || this.action === ACT.STEP;
-    if (ready) {
-      const m = this.weapon.motion || {};
-      const whirl = m.whirl || 5.5;
-      const swing = (m.swing != null ? m.swing : 0.35);
-      // THE WHIRL RIDES THE NAGARA. Real Gatka rotates "in smooth circles matching
-      // the drum's beat": the blade surges as the beat lands and eases through the
-      // mid-beat, so the atthha breathes with the rhythm instead of grinding at a
-      // dead constant rate. The mean rate stays `whirl` (the weapon's identity
-      // tempo — cos integrates to zero over the cycle); only the phase swings.
-      const rate = whirl * (1 + swing * Math.cos(this.beatPhase * Math.PI * 2));
-      this.whirlPhase += rate * dt;
-      if (this.whirlPhase >  Math.PI) this.whirlPhase -= Math.PI * 2;
-      else if (this.whirlPhase < -Math.PI) this.whirlPhase += Math.PI * 2;
-    } else {
-      // Keep the phase glued to the live angle so the whirl resumes seamlessly
-      // (no backwards snap) the instant the warrior returns to a ready state.
-      this.whirlPhase = this.weaponAngle;
-    }
-    const target = this._targetArmAngle();
-    this.weaponMomentum *= WEIGHT_FRICTION[this.weapon.weight] || 0.94;
-    if (this.action === ACT.ATTACK && this.attackPhase === "active" &&
-        this.curMove && this.curMove.hits >= 3) {
-      this.weaponMomentum += 0.16;   // Chakkar keeps spinning while active
-    }
-    this.weaponAngle += this.weaponMomentum;
-    // Ease toward the strike pose during ACTIVE frames so the visible blade lines
-    // up with the live hitbox — but ARRIVE, don't pop. The ease ramps across the
-    // active window (0.34 → 0.72) so the blade sweeps smoothly into the pose and
-    // only locks on hard at the end of the active frames, killing the old snap.
-    let center = 0.18;
-    if (this.action === ACT.ATTACK && this.attackPhase === "active") {
+    // The Chakkar's multi-hit barrier keeps its momentum SPIN; every OTHER strike is
+    // a deterministic swing ARC (below). Non-attack states use the whirl+ease path.
+    const chakkarSpin = this.action === ACT.ATTACK && this.curMove && this.curMove.hits >= 3;
+    const swinging = this.action === ACT.ATTACK && !chakkarSpin;
+
+    if (swinging) {
+      // THE VAAR SWING — anticipation → a fast arc THROUGH the zone → follow-through
+      // → a slow settle. It is driven by the attack's own phase clock, NOT by residual
+      // whirl momentum, and it always starts from the wound-back pose — so a strike
+      // reads as a full, identical swing EVERY time, whatever angle the idle whirl
+      // had parked the blade at. THIS is the fix for "the sword sticks and won't move"
+      // (the old code eased to a static pose and held it, invisibly when the whirl was
+      // already there). See STRIKE_ARC / game-animation principles: fast-in, slow-out.
+      const arc = STRIKE_ARC[this.vector] || STRIKE_ARC[VECTOR.MID];
       const m = this.curMove || this.weapon;
-      const p = m.active ? clamp(this.phaseT / m.active, 0, 1) : 1;
-      center = lerp(0.34, 0.72, p);
+      const easeOut = (u) => 1 - (1 - u) * (1 - u);   // decelerate — settle / weight
+      const easeIn  = (u) => u * u;                   // accelerate — the whip
+      if (this.attackPhase === "windup") {
+        const u = m.windup ? clamp(this.phaseT / m.windup, 0, 1) : 1;
+        this.weaponAngle = lerp(this.swingFrom, arc.back, easeOut(u));  // pull back
+      } else if (this.attackPhase === "active") {
+        const u = m.active ? clamp(this.phaseT / m.active, 0, 1) : 1;
+        this.weaponAngle = lerp(arc.back, arc.follow, easeIn(u));       // whip through
+      } else {
+        const u = m.recovery ? clamp(this.phaseT / m.recovery, 0, 1) : 1;
+        this.weaponAngle = lerp(arc.follow, REST_ANGLE, easeOut(u));    // follow-through
+      }
+      this.whirlPhase = this.weaponAngle;   // glue so the whirl resumes seamlessly after
+      this.weaponMomentum = 0;              // the arc owns the angle; drop residual spin
+    } else {
+      // --- Ready-whirl + momentum + ease-to-pose (idle/walk/step/block/hurt/Chakkar) ---
+      // THE ATTHHA NEVER STOPS: in a ready state the blade whirls the figure-eight
+      // continuously, and that whirl RIDES THE NAGARA (surges on the beat, eases through
+      // the mid-beat; mean rate = `whirl`, so each weapon keeps its identity tempo).
+      const ready = this.action === ACT.IDLE || this.action === ACT.WALK || this.action === ACT.STEP;
+      if (ready) {
+        const mo = this.weapon.motion || {};
+        const whirl = mo.whirl || 5.5;
+        const swing = (mo.swing != null ? mo.swing : 0.35);
+        const rate = whirl * (1 + swing * Math.cos(this.beatPhase * Math.PI * 2));
+        this.whirlPhase += rate * dt;
+        if (this.whirlPhase >  Math.PI) this.whirlPhase -= Math.PI * 2;
+        else if (this.whirlPhase < -Math.PI) this.whirlPhase += Math.PI * 2;
+      } else {
+        this.whirlPhase = this.weaponAngle;   // glued so the whirl resumes without a snap
+      }
+      const target = this._targetArmAngle();
+      this.weaponMomentum *= WEIGHT_FRICTION[this.weapon.weight] || 0.94;
+      let center = 0.18;
+      if (chakkarSpin && this.attackPhase === "active") {
+        this.weaponMomentum += 0.16;                     // Chakkar keeps spinning
+        const cm = this.curMove || this.weapon;
+        const p = cm.active ? clamp(this.phaseT / cm.active, 0, 1) : 1;
+        center = lerp(0.34, 0.72, p);
+      }
+      this.weaponAngle += this.weaponMomentum;
+      // Ease toward the target the SHORT way around the circle, so a whirlPhase that
+      // wrapped past ±π never drags the blade the long way back through the eight.
+      let diff = target - this.weaponAngle;
+      while (diff >  Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      this.weaponAngle += diff * center;
+      if (this.weaponAngle >  Math.PI) this.weaponAngle -= Math.PI * 2;
+      else if (this.weaponAngle < -Math.PI) this.weaponAngle += Math.PI * 2;
     }
-    // Ease toward the target the SHORT way around the circle, so a whirlPhase that
-    // wrapped past ±π never drags the blade the long way back through the eight.
-    let diff = target - this.weaponAngle;
-    while (diff >  Math.PI) diff -= Math.PI * 2;
-    while (diff < -Math.PI) diff += Math.PI * 2;
-    this.weaponAngle += diff * center;
-    // Keep the angle bounded so a strike out of a whirl always settles quickly.
-    if (this.weaponAngle >  Math.PI) this.weaponAngle -= Math.PI * 2;
-    else if (this.weaponAngle < -Math.PI) this.weaponAngle += Math.PI * 2;
-    // Blade angular speed this step (whirl + strike spin), shortest-arc — drives
-    // the visible smear so BOTH the idle whirl and a live strike leave a trail.
+
+    // Blade angular speed this step — drives the visible smear, so BOTH the idle
+    // whirl AND a live swing leave a motion trail (the "smear = speed" principle).
     let av = this.weaponAngle - prevAngle;
     while (av >  Math.PI) av -= Math.PI * 2;
     while (av < -Math.PI) av += Math.PI * 2;
@@ -2232,7 +2273,7 @@ class Fighter {
     this.prevX = this.x; this.stillTime = 0; this.defenseMult = 1;
     this.flow = 0; this.flowT = 0;
     this.weaponAngle = -0.35; this.weaponMomentum = 0;
-    this.whirlPhase = -0.35; this.weaponAngVel = 0;
+    this.whirlPhase = -0.35; this.weaponAngVel = 0; this.swingFrom = -0.35;
   }
 
   /* ----- rendering ------------------------------------------------------ */
@@ -2955,6 +2996,7 @@ class Game {
     this.freezeT = 0;                // brief hit-stop on impactful hits
 
     this.scale = 1;                  // design units → backing-store pixels
+    this._bgCache = null;            // offscreen chhaoni snapshot (built lazily on LOW_PERF)
 
     this._cacheDom();
     this._bindUI();
@@ -2999,6 +3041,21 @@ class Game {
     const h = Math.max(1, Math.round(cssH * dpr));
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
     this.scale = w / CANVAS_W;
+  }
+
+  /**
+   * Render the chhaoni ONCE to an offscreen canvas (design space, 900×500) so
+   * LOW_PERF devices can blit it every frame instead of re-drawing the whole
+   * background. Content is resolution-independent vector art, so a design-space
+   * snapshot scales with the main context's transform just like the live draw.
+   * A frozen snapshot (t=0) — the ambient flicker/flag/drum stop, which the phone
+   * will not miss while the fight stays smooth.
+   */
+  _buildBgCache() {
+    const c = document.createElement("canvas");
+    c.width = CANVAS_W; c.height = CANVAS_H;
+    drawBackground(c.getContext("2d"), 0, 0);
+    this._bgCache = c;
   }
 
   /* ---- DOM overlay wiring --------------------------------------------- */
@@ -3864,7 +3921,15 @@ class Game {
     // has a visible source. Falls back to the Kirpan's 120bpm on the menus.
     const bp = this.player ? this.player.beatPhase : (this.time % 0.5) / 0.5;
     const beatHit = clamp(1 - Math.min(bp, 1 - bp) / PENTRA.onBeatWindow, 0, 1);
-    drawBackground(ctx, this.time, beatHit);
+    // On low-power phones, BLIT a cached chhaoni instead of re-drawing gradients +
+    // rampart + tents + rack + drum every frame. The rhythm still reads via the
+    // per-fighter beat ring + HUD pips below; only the ambient background freezes.
+    if (LOW_PERF) {
+      if (!this._bgCache) this._buildBgCache();
+      ctx.drawImage(this._bgCache, 0, 0, CANVAS_W, CANVAS_H);
+    } else {
+      drawBackground(ctx, this.time, beatHit);
+    }
 
     if (playing) {
       // Pentra beat pulse: a gold ring flares at each fighter's feet on the beat.
