@@ -3,6 +3,17 @@
 Context for the next session. Written after a long run of gameplay, art, audio,
 and UI work. **Everything below is verified against the code, not remembered.**
 
+## DRIVE joystick — "drive hand" (2026-07-24)
+
+Users wanted fewer taps: movement is now a **floating joystick** on touch (not a
+D-pad). `_bindDrive` floats a ring to the left thumb; `_applyDrive(dx,dy)` holds the
+SAME keys the D-pad emits (`a/d` move, `w/s` High/Low stance) via the `DRIVE` config
+(deadzone/maxRadius) → combat identical. `_releaseDrive` drops all held keys on lift/
+switch/round-end. Top-left `🕹️/⊞` toggle (`#drive-toggle`) switches DRIVE ⇄ D-pad,
+default DRIVE on touch, persisted in localStorage; `.drive-mode` on `#touch` shows the
+matching control. Jump moved to the right cluster (present in both schemes). Guarded by
+verify.js §15 (drive maps to the same held keys as the buttons). See docs/ARCHITECTURE.md.
+
 ## State right now
 
 - **Git:** it IS a repo, working tree **clean**, `origin/main` exists, all session

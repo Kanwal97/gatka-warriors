@@ -269,6 +269,13 @@ const KEYS = Object.freeze({
   ultimate: ["o"],
 });
 
+// THE DRIVE JOYSTICK ("drive hand"). A floating thumbstick that replaces the D-pad
+// on touch: dragging it HOLDS the same movement/stance keys the D-pad and keyboard
+// emit (see `_applyDrive`), so it is purely another input source — combat is shared.
+//   deadzone  px of slack around centre → neutral (Mid stance, no move)
+//   maxRadius px the nub travels for full deflection (also the visual clamp)
+const DRIVE = Object.freeze({ deadzone: 15, maxRadius: 48 });
+
 /**
  * THE CONTROL GUIDE — one source of truth for what every key does.
  *
@@ -3159,6 +3166,101 @@ class Game {
       // Belt and braces: if the pointer is lost some other way, don't stick.
       btn.addEventListener("lostpointercapture", up);
     });
+
+    this._bindDrive();
+  }
+
+  /* ----- DRIVE joystick ("drive hand") --------------------------------- */
+
+  /** Hold/release a key on the shared InputManager (press is edge-safe). */
+  _setHeld(key, on) { if (on) this.input.press(key); else this.input.release(key); }
+
+  /**
+   * Map a joystick offset (dx, dy px from centre) to the SAME held keys the D-pad
+   * emits: horizontal → move (a/d), vertical → High/Low stance (w/s). Inside the
+   * deadzone an axis is neutral (Mid stance / no move). Pure — unit-tested (§15).
+   */
+  _applyDrive(dx, dy) {
+    const dz = DRIVE.deadzone;
+    this._setHeld(KEYS.left[0],  dx < -dz);   // "a" — move left
+    this._setHeld(KEYS.right[0], dx >  dz);   // "d" — move right
+    this._setHeld(KEYS.up[0],    dy < -dz);   // "w" — High stance
+    this._setHeld(KEYS.down[0],  dy >  dz);   // "s" — Low  stance
+  }
+
+  /** Release every key the joystick can hold (thumb up / mode switch / round end). */
+  _releaseDrive() {
+    this._setHeld(KEYS.left[0], false);  this._setHeld(KEYS.right[0], false);
+    this._setHeld(KEYS.up[0], false);    this._setHeld(KEYS.down[0], false);
+  }
+
+  /** Wire the floating joystick pointer handlers + the drive/D-pad toggle. */
+  _bindDrive() {
+    const zone = document.getElementById("drive");
+    const base = document.getElementById("drive-base");
+    const nub  = base && base.querySelector ? base.querySelector(".drive-nub") : null;
+
+    if (zone && base) {
+      let id = null, cx = 0, cy = 0;
+      const moveNub = (dx, dy) => { if (nub) nub.style.transform = "translate(" + dx + "px," + dy + "px)"; };
+      const down = (e) => {
+        e.preventDefault();
+        id = e.pointerId;
+        if (zone.setPointerCapture) zone.setPointerCapture(e.pointerId);
+        const r = zone.getBoundingClientRect ? zone.getBoundingClientRect() : { left: 0, top: 0 };
+        cx = e.clientX; cy = e.clientY;                 // the stick floats to the thumb
+        base.style.left = (cx - r.left) + "px";
+        base.style.top  = (cy - r.top) + "px";
+        base.classList.add("active");
+        moveNub(0, 0);
+      };
+      const move = (e) => {
+        if (id === null || e.pointerId !== id) return;
+        e.preventDefault();
+        let dx = e.clientX - cx, dy = e.clientY - cy;
+        const d = Math.hypot(dx, dy), max = DRIVE.maxRadius;
+        if (d > max) { dx = dx / d * max; dy = dy / d * max; }   // clamp the nub to the ring
+        moveNub(dx, dy);
+        this._applyDrive(dx, dy);
+      };
+      const up = (e) => {
+        if (id !== null && e.pointerId !== id) return;
+        id = null;
+        this._releaseDrive();
+        base.classList.remove("active"); moveNub(0, 0);
+      };
+      zone.addEventListener("pointerdown", down);
+      zone.addEventListener("pointermove", move);
+      zone.addEventListener("pointerup", up);
+      zone.addEventListener("pointercancel", up);
+      zone.addEventListener("lostpointercapture", up);
+    }
+
+    // DRIVE / D-PAD toggle. Default = DRIVE on touch; the choice persists.
+    const dtoggle = document.getElementById("drive-toggle");
+    let drive = true;
+    try {
+      const s = window.localStorage && window.localStorage.getItem("gatka.drive");
+      if (s !== null && s !== undefined) drive = s !== "0";
+    } catch (_) {}
+    this._driveMode = drive;
+    const applyMode = () => {
+      if (this.dom.touch) this.dom.touch.classList.toggle("drive-mode", this._driveMode);
+      if (dtoggle) {
+        dtoggle.classList.toggle("on", this._driveMode);
+        dtoggle.innerHTML = this._driveMode ? "🕹️" : "⊞";   // 🕹️ / ⊞
+        if (dtoggle.setAttribute) dtoggle.setAttribute("aria-pressed", this._driveMode ? "true" : "false");
+      }
+    };
+    applyMode();
+    if (dtoggle) {
+      dtoggle.addEventListener("click", () => {
+        this._driveMode = !this._driveMode;
+        this._releaseDrive();                 // never leave a key held across a switch
+        try { if (window.localStorage) window.localStorage.setItem("gatka.drive", this._driveMode ? "1" : "0"); } catch (_) {}
+        applyMode();
+      });
+    }
   }
 
   _onAction(action) {
@@ -3418,13 +3520,16 @@ class Game {
       const touch = this._isTouch || !!window.__GATKA_TOUCH__;
       const show = touch && s === STATE.GAMEPLAY;
       this.dom.touch.classList.toggle("hidden", !show);
-      // Collapse the abilities tray whenever the pad hides, so it never comes back
-      // open on the next round.
+      // Collapse the abilities tray + drop any held joystick keys whenever the pad
+      // hides, so nothing comes back open or stuck on the next round.
       if (!show) {
         const tray = document.getElementById("ability-tray");
         const toggle = document.getElementById("ability-toggle");
         if (tray) tray.classList.remove("open");
         if (toggle) toggle.classList.remove("on");
+        const base = document.getElementById("drive-base");
+        if (base) base.classList.remove("active");
+        if (this._releaseDrive) this._releaseDrive();
       }
     }
   }

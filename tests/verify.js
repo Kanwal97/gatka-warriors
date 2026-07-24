@@ -416,3 +416,33 @@ console.log(String.fromCharCode(10)+(fails?fails+' FAILING':'ALL PASS'));
         nearest < 0.25, 'closest approach to pose 0.0 = ' + nearest.toFixed(3) + ' rad');
 }
 console.log(String.fromCharCode(10)+(fails?fails+' FAILING':'ALL PASS'));
+
+// ---- 15. DRIVE joystick maps to the SAME keys the D-pad/keyboard emit ----------
+// The "drive hand" is just another input source: dragging holds a/d (move) and w/s
+// (High/Low stance). If this mapping is right, combat is byte-for-byte identical to
+// the buttons — nothing else in the fight logic can tell the difference.
+{
+  const H = () => [...g.input.held].sort().join('');
+  const set = (k) => k.slice().sort().join('');
+  g._releaseDrive();
+  g._applyDrive(-30, 0);   // push LEFT
+  check('drive LEFT holds only "a"', H() === set(['a']), 'held={' + H() + '}');
+  g._releaseDrive();
+  g._applyDrive(30, 0);    // push RIGHT
+  check('drive RIGHT holds only "d"', H() === set(['d']), 'held={' + H() + '}');
+  g._releaseDrive();
+  g._applyDrive(0, -30);   // push UP → High stance
+  check('drive UP holds only "w" (High stance)', H() === set(['w']), 'held={' + H() + '}');
+  g._releaseDrive();
+  g._applyDrive(0, 30);    // push DOWN → Low stance
+  check('drive DOWN holds only "s" (Low stance)', H() === set(['s']), 'held={' + H() + '}');
+  g._releaseDrive();
+  g._applyDrive(24, 24);   // diagonal → move right + Low
+  check('drive diagonal holds "d"+"s"', H() === set(['d', 's']), 'held={' + H() + '}');
+  g._releaseDrive();
+  g._applyDrive(8, -8);    // inside the deadzone → neutral (Mid, no move)
+  check('drive inside the deadzone holds nothing (Mid stance)', H() === '', 'held={' + H() + '}');
+  g._applyDrive(40, 0); g._releaseDrive();
+  check('releasing the drive clears every held key', H() === '', 'held={' + H() + '}');
+}
+console.log(String.fromCharCode(10)+(fails?fails+' FAILING':'ALL PASS'));
