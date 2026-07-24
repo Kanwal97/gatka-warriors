@@ -276,6 +276,13 @@ const KEYS = Object.freeze({
 //   maxRadius px the nub travels for full deflection (also the visual clamp)
 const DRIVE = Object.freeze({ deadzone: 15, maxRadius: 48 });
 
+// HIT-STOP (freeze frames on impact). A short pause on a landed blow sells the hit —
+// but the loop skips the WHOLE sim (input included) while `freezeT > 0`, so a long
+// freeze reads as the game hanging / the buttons going dead right when you strike.
+// Hit-stop should be only a FEW frames; this caps EVERY freeze source (hit, bijli,
+// ultimate) so the game never stops answering input for longer than this.
+const HITSTOP = Object.freeze({ max: 0.09, mobileMax: 0.05 });   // seconds (~5f / ~3f)
+
 /**
  * THE CONTROL GUIDE — one source of truth for what every key does.
  *
@@ -747,6 +754,10 @@ class ParticleSystem {
   constructor() { this.particles = []; }
 
   burst(x, y, count = 26, tint = "#ffd479") {
+    // On phones, spawn fewer sparks and hard-cap the pool so a long flurry of strikes
+    // can't quietly starve the frame rate (a second, smaller cause of the strike lag).
+    if (LOW_PERF) count = Math.ceil(count * 0.5);
+    if (this.particles.length > 260) this.particles.splice(0, this.particles.length - 260);
     for (let i = 0; i < count; i++) {
       const angle = rand(0, Math.PI * 2);
       const speed = rand(90, 380);
@@ -3124,32 +3135,33 @@ class Game {
     // forces it on for testing on any machine.
     LOW_PERF = !!window.__GATKA_LOWPERF__ || this._isTouch;
 
-    // ABILITIES TRAY — the ✦ toggle reveals the three Simran abilities, which now
-    // live in a pop-up instead of three always-on buttons. Pure UI (no game key);
-    // it auto-collapses after an ability fires so it never blocks the view.
-    const tray   = document.getElementById("ability-tray");
-    const toggle = document.getElementById("ability-toggle");
-    const closeTray = () => {
-      if (!tray) return;
-      tray.classList.remove("open");
-      if (toggle) {
-        toggle.classList.remove("on");
-        if (toggle.setAttribute) toggle.setAttribute("aria-expanded", "false");
-      }
-    };
-    if (toggle && tray) {
-      toggle.addEventListener("pointerdown", (e) => {
+    // SMART ABILITY BUTTON — ONE tap fires the best ready Simran ability. It has no
+    // data-key: `_smartAbility()` picks u/i/o at tap time, and we press it through the
+    // SAME InputManager path the keyboard uses, so the cast is identical. (The old ✦
+    // tray needed two taps and cost fights.) `_syncSmartButton` keeps its label/colour
+    // showing what it will cast; the held key is tracked so pointerup releases it.
+    const abil = document.getElementById("ability-btn");
+    this._abilityBtn = abil;
+    if (abil) {
+      let heldKey = null;
+      abil.addEventListener("pointerdown", (e) => {
         e.preventDefault();
-        const open = tray.classList.toggle("open");
-        toggle.classList.toggle("on", open);
-        if (toggle.setAttribute) toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        if (abil.setPointerCapture) abil.setPointerCapture(e.pointerId);
+        heldKey = this._smartAbility();
+        if (heldKey) { this.input.press(heldKey); abil.classList.add("on"); }
       });
+      const abilUp = (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        if (heldKey) { this.input.release(heldKey); heldKey = null; }
+        abil.classList.remove("on");
+      };
+      abil.addEventListener("pointerup", abilUp);
+      abil.addEventListener("pointercancel", abilUp);
+      abil.addEventListener("lostpointercapture", abilUp);
     }
 
     root.querySelectorAll("[data-key]").forEach((btn) => {
       const key = btn.dataset.key;
-      // Ability buttons sit inside the tray; tapping one collapses it again.
-      const inTray = !!(tray && typeof tray.contains === "function" && tray.contains(btn));
       const down = (e) => {
         e.preventDefault();
         if (btn.setPointerCapture) btn.setPointerCapture(e.pointerId);
@@ -3158,7 +3170,6 @@ class Game {
       const up = (e) => {
         e.preventDefault();
         this.input.release(key); btn.classList.remove("on");
-        if (inTray) closeTray();
       };
       btn.addEventListener("pointerdown", down);
       btn.addEventListener("pointerup", up);
@@ -3168,6 +3179,52 @@ class Game {
     });
 
     this._bindDrive();
+  }
+
+  /* ----- SMART ABILITY button ------------------------------------------ */
+
+  /**
+   * Pick the best READY Simran ability for the moment and return its key (u/i/o), or
+   * null if the meter can afford none. Priority: survive an immediate threat with the
+   * Shield → unleash the Ultimate at a full meter → Chakram → Shield as a last resort.
+   * Pure read of existing state (simran, ABILITY costs, enemy) — also unit-tested.
+   */
+  _smartAbility() {
+    const p = this.player, e = this.enemy;
+    if (!p) return null;
+    const s = p.simran;
+    const affordShield = s >= ABILITY.shield.cost && p.shieldT <= 0;
+    // Under immediate danger you can't just ult through → raise the Shield.
+    const incoming = this.projectiles && this.projectiles.some((pr) => pr.owner === e);
+    const threat = !!e && (e.ultActive || incoming ||
+      (e.action === ACT.ATTACK && e.attackPhase !== "recovery"));
+    if (threat && affordShield && s < ABILITY.ultimate.cost) return KEYS.shield[0];   // "i"
+    if (s >= ABILITY.ultimate.cost) return KEYS.ultimate[0];                           // "o"
+    if (s >= ABILITY.chakram.cost)  return KEYS.chakram[0];                            // "u"
+    if (affordShield)               return KEYS.shield[0];                             // "i"
+    return null;
+  }
+
+  /**
+   * Keep the smart button showing WHAT it will cast (label + colour) and whether it is
+   * castable at all — so the auto-pick is transparent and a locked tap is never wasted.
+   * Called each render; only touches the DOM when the state actually changes.
+   */
+  _syncSmartButton() {
+    const btn = this._abilityBtn;
+    if (!btn) return;
+    const key = this._smartAbility();
+    const state = key === KEYS.ultimate[0] ? "ult"
+                : key === KEYS.chakram[0]  ? "chak"
+                : key === KEYS.shield[0]   ? "shield" : "none";
+    if (state === this._abilState) return;   // no change → no DOM work
+    this._abilState = state;
+    const label = state === "ult" ? "ULT" : state === "chak" ? "CHAKRAM"
+                : state === "shield" ? "SHIELD" : "✦";
+    btn.innerHTML = label;
+    btn.classList.remove("a-ult", "a-chak", "a-shield", "a-none", "a-ready");
+    btn.classList.add("a-" + state);
+    if (state !== "none") btn.classList.add("a-ready");
   }
 
   /* ----- DRIVE joystick ("drive hand") --------------------------------- */
@@ -3520,13 +3577,9 @@ class Game {
       const touch = this._isTouch || !!window.__GATKA_TOUCH__;
       const show = touch && s === STATE.GAMEPLAY;
       this.dom.touch.classList.toggle("hidden", !show);
-      // Collapse the abilities tray + drop any held joystick keys whenever the pad
-      // hides, so nothing comes back open or stuck on the next round.
+      // Drop any held joystick keys whenever the pad hides, so nothing sticks into
+      // the next round.
       if (!show) {
-        const tray = document.getElementById("ability-tray");
-        const toggle = document.getElementById("ability-toggle");
-        if (tray) tray.classList.remove("open");
-        if (toggle) toggle.classList.remove("on");
         const base = document.getElementById("drive-base");
         if (base) base.classList.remove("active");
         if (this._releaseDrive) this._releaseDrive();
@@ -3670,6 +3723,10 @@ class Game {
     this.time += frameTime;
 
     if (this.freezeT > 0) {
+      // CAP the freeze: the sim (and input consumption) is paused while it runs, so an
+      // over-long hit-stop is exactly the "buttons don't work when I strike" hang.
+      const cap = LOW_PERF ? HITSTOP.mobileMax : HITSTOP.max;
+      if (this.freezeT > cap) this.freezeT = cap;
       this.freezeT -= frameTime;   // hit-stop: pause sim but keep rendering
     } else {
       this.acc += frameTime;
@@ -3855,14 +3912,16 @@ class Game {
       // lands like the thing it is named for.
       const power = clamp(dealt / 22, 0.30, 1.7);
       this.shake = Math.max(this.shake, (big ? 15 : 9) * power);
-      this.freezeT = Math.max(this.freezeT, (big ? 0.14 : 0.10) * power);
+      // Kept SHORT (a few frames) — the freeze pauses input, so a long one hangs the
+      // fight. The HITSTOP cap in _frame is the hard ceiling on top of this.
+      this.freezeT = Math.max(this.freezeT, (big ? 0.10 : 0.07) * power);
     } else if (outcome === "parry")   this._spawnFloater(x, y - 22, "PARRY!", "#fff4d6", 18);
     else if (outcome === "reflect")   this._spawnFloater(x, y - 22, "REFLECT!", "#8fe3ff", 16);
     else if (outcome === "block")     this._spawnFloater(x, y - 16, "block", "#aeb8c4", 12);
     else if (outcome === "evade")     this._spawnFloater(x, y - 24, "EVADE!", "#7be0a6", 17);
     if (onBeat && (outcome === "hit" || outcome === "block" || outcome === "guardbreak")) {
       this.particles.burst(x, y, 10, "#ffd479");   // on-beat flourish
-      this.freezeT += 0.03;
+      this.freezeT += 0.02;
     }
   }
 
@@ -3894,7 +3953,7 @@ class Game {
     this.bolts.push({ pts, forks, life: 0.26, max: 0.26 });
     this.boltFlash = 1;
     this.shake = Math.max(this.shake, 20);
-    this.freezeT = Math.max(this.freezeT, 0.11);
+    this.freezeT = Math.max(this.freezeT, 0.08);   // brief — the flash carries the drama, not a long freeze
     this.particles.burst(x, y, 26, "#cfe6ff");
     this.particles.burst(x, y, 12, "#ffffff");
     Sfx.thunder();
@@ -4079,6 +4138,7 @@ class Game {
 
     if (playing) {
       HUD.draw(ctx, this);
+      this._syncSmartButton();   // keep the ability button showing what it will cast
       // Gold screen tint whenever anyone is unleashing an ultimate.
       if (this.player.ultActive || this.enemy.ultActive) {
         ctx.save();

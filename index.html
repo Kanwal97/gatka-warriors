@@ -237,18 +237,17 @@
   /* The step is the art's FIRST answer, not a footnote — colour it like the
      EVADE! it produces, and put it under the thumb beside GUARD. */
   .tkey.k-dodge  { background: linear-gradient(180deg, #7be0a6, #3f9e72); border-color: #d8fff0; color: #06301f; }
-  /* The ✦ toggle for the abilities tray. */
-  .tkey.k-abil   { background: linear-gradient(180deg, #caa24a, #8a5a15); border-color: var(--gold); color: #1a0f05; font-size: 22px; }
-  /* ABILITIES TRAY — pops up above the cluster, right-aligned, stacked; hidden
-     until the ✦ is tapped, and auto-collapses after an ability fires (see game.js). */
-  .ability-tray {
-    position: absolute; right: 0; bottom: calc(100% + 8px);
-    display: none; flex-direction: column; gap: 6px;
-  }
-  .ability-tray.open { display: flex; }
-  .tkey.k-chak   { background: rgba(60, 90, 140, 0.72); border-color: #8fb4e3; }
-  .tkey.k-shield { background: rgba(42, 111, 79, 0.72); border-color: #2a6f4f; }
-  .tkey.k-ult    { background: rgba(138, 90, 21, 0.72); border-color: var(--gold); }
+  /* SMART ABILITY BUTTON — one tap casts the best ready Simran ability. Its colour
+     tells you WHICH one it will fire (set by _syncSmartButton via a state class), and
+     it dims when the meter can't afford any (so you never waste a tap). */
+  .tkey.k-abil   { font-size: 12px; letter-spacing: 0.3px;
+    background: linear-gradient(180deg, #5a4a2a, #241708); border-color: var(--saffron-dim); color: var(--gold); }
+  .tkey.k-abil.a-chak   { background: linear-gradient(180deg, #3c5a8c, #1b2c4a); border-color: #8fb4e3; color: #eaf2ff; }
+  .tkey.k-abil.a-shield { background: linear-gradient(180deg, #327f5c, #17402a); border-color: #6fd6a2; color: #eafff4; }
+  .tkey.k-abil.a-ult    { background: linear-gradient(180deg, var(--gold), var(--saffron)); border-color: var(--gold); color: #1a0f05; }
+  .tkey.k-abil.a-ready  { box-shadow: 0 0 0 2px rgba(255, 212, 121, 0.6), 0 2px 10px rgba(255, 157, 46, 0.5); }
+  /* Nothing affordable → clearly inert, so a tap is never wasted mid-fight. */
+  .tkey.k-abil.a-none   { opacity: 0.4; filter: grayscale(0.6); }
 
   /* ============================================================
      DRIVE JOYSTICK ("drive hand") — steer with the left thumb
@@ -674,18 +673,13 @@
         <button class="tkey k-right" data-key="d" aria-label="Move right">&rarr;</button>
       </div>
       <div class="cluster tacts">
-        <!-- ABILITIES TRAY — the three Simran abilities used to sit here as three
-             always-on buttons; players found the pad crowded. They now live behind
-             one ✦ toggle and pop up only when wanted. Each keeps its data-key, so
-             InputManager (and every combat rule) is completely unchanged. -->
-        <div class="ability-tray" id="ability-tray">
-          <button class="tkey k-chak"   data-key="u" aria-label="Chakram Storm">CHAK</button>
-          <button class="tkey k-shield" data-key="i" aria-label="Iron Shield">SHLD</button>
-          <button class="tkey k-ult"    data-key="o" aria-label="Ultimate">ULT</button>
-        </div>
+        <!-- SMART ABILITY BUTTON — ONE tap fires the best ready Simran ability (the
+             three used to hide behind a ✦ tray, which cost two taps and lost fights).
+             It carries no data-key: the handler in _bindTouch picks u/i/o at tap time
+             (Game._smartAbility), and _syncSmartButton relabels/colours it to show
+             WHAT it will cast and dims it when the meter can't afford one. -->
+        <button class="tkey k-abil" id="ability-btn" aria-label="Cast ability">&#10022;</button>
         <button class="tkey k-jump"  data-key=" " aria-label="Jump">JUMP</button>
-        <button class="tkey k-abil" id="ability-toggle" aria-label="Abilities"
-                aria-expanded="false" aria-controls="ability-tray">&#10022;</button>
         <button class="tkey k-dodge"  data-key="Shift" aria-label="Pentra side-step (dodge)">STEP</button>
         <button class="tkey k-guard"  data-key="k" aria-label="Guard">GUARD</button>
         <button class="tkey k-strike" data-key="j" aria-label="Strike">STRIKE</button>

@@ -98,9 +98,14 @@ A match is best-of-3 (`ROUNDS_TO_WIN = 2`), but difficulty **climbs across match
 `Game._frame(now)`:
 - clamps `frameTime` (avoids spiral-of-death after tab-out),
 - **hit-stop:** if `freezeT > 0`, decrement it and skip simulation (keep
-  rendering) — this is the impact "weight" on hits/parries,
+  rendering) — this is the impact "weight" on hits/parries. Because this skips the
+  sim **including input consumption**, `freezeT` is **capped to `HITSTOP.max`
+  (`mobileMax` on `LOW_PERF`)** here — an uncapped freeze (hits could stack to ~0.2s)
+  read as the game hanging / buttons dead right when you strike. A few frames only.
 - else accumulate into `acc` and run `_update(FIXED_DT)` in whole 1/60 steps,
 - always `_render()`, then `input.endFrame()` (clears rising-edge presses).
+  Taps during hit-stop are **buffered** (endFrame only runs inside a sim step), so
+  the queued action fires the instant the (now short) freeze lifts.
 
 Keep **all game logic in `_update`**, never in `_render`.
 
@@ -142,13 +147,17 @@ Phones lagged badly, from a few avoidable costs — all now addressed:
   flicker/flag/drum freeze on mobile; the rhythm still reads via the per-fighter beat
   ring + HUD pips. Desktop keeps the live animated background.
 
-**Touch controls** are trimmed to fewer buttons: the three Simran abilities live in a
-pop-up **tray** behind one `✦` toggle (wired in `_bindTouch`; auto-collapses after an
-ability fires and whenever the pad hides), so the pad shows ~8 persistent keys, not 11.
-Each tray button keeps its `data-key`, so `InputManager` and every combat rule are
-unchanged. Keys are large (64px on touch), with **instant press feedback** via `.on`
-*and* a `:active` CSS fallback (never waits on the game loop). Guarded by
-`tests/verify.js` §13 (LOW_PERF render path).
+**Touch controls** are trimmed. Movement is the DRIVE joystick (below), and the three
+Simran abilities collapse to **one smart ABILITY button** (`#ability-btn`): a single tap
+fires the best ready ability. `Game._smartAbility()` picks the key (`i`/`o`/`u`) —
+Shield to survive an immediate threat → Ultimate at a full meter → Chakram → Shield —
+and `_bindTouch` presses it through the normal `InputManager` path (so the cast is
+identical to the keyboard). `Game._syncSmartButton()` (called in `_render`) relabels /
+recolours the button to **show what it will cast** (`CHAKRAM`/`SHIELD`/`ULT`) and dims it
+when nothing is affordable, so the auto-pick is transparent and a locked tap is never
+wasted. (This replaced a `✦` pop-up tray that needed two taps — too slow in a fight.)
+Keys are large (64px on touch) with **instant press feedback** via `.on` *and* a
+`:active` CSS fallback. Guarded by `tests/verify.js` §17 (smart pick) and §13 (LOW_PERF).
 
 ### The DRIVE joystick ("drive hand")
 
