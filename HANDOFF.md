@@ -3,6 +3,26 @@
 Context for the next session. Written after a long run of gameplay, art, audio,
 and UI work. **Everything below is verified against the code, not remembered.**
 
+## Smart ability button — one-tap Simran (2026-07-24)
+
+The ✦ tray needed TWO taps for an ability (open → pick) and cost fights. Replaced with
+ONE smart `#ability-btn`: `Game._smartAbility()` picks the key (Shield if threatened →
+Ultimate at full meter → Chakram → Shield) and `_bindTouch` presses it through the
+normal InputManager path (cast identical to keyboard). `_syncSmartButton()` (in `_render`)
+relabels/recolours it to show what it will cast (`CHAKRAM`/`SHIELD`/`ULT`) and dims it
+when unaffordable. Tray markup/CSS/JS removed. Combat/costs/keyboard unchanged. Guarded
+by verify.js §17. See docs/ARCHITECTURE.md.
+
+## Hit-stop cap — the strike "hang" (2026-07-24)
+
+Users: striking/connecting lagged and buttons went dead for a moment. Cause: the
+frame loop skips the WHOLE sim (input included) while `freezeT>0`, and hit-stop could
+reach ~0.20s (on-beat big hit; +bijli `0.11`). Fix: `HITSTOP = {max:0.09, mobileMax:0.05}`
+clamped in `_frame` (caps EVERY freeze source), trimmed `_hitFeedback` coefficients
+(0.10/0.07·power, on-beat +0.02) and `_spawnBolt` (0.08); `ParticleSystem.burst` halves
+count + caps the pool at 260 on `LOW_PERF`. Input buffering already existed, so this is
+pure duration-bounding. Guarded by verify.js §16. See docs/ARCHITECTURE.md.
+
 ## DRIVE joystick — "drive hand" (2026-07-24)
 
 Users wanted fewer taps: movement is now a **floating joystick** on touch (not a

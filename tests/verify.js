@@ -15,10 +15,10 @@ global.document={getElementById:id=>id==='game'?canvasEl:makeEl(),createElement:
 let __src=require('fs').readFileSync('d:/project/AI/Gatka/game.js','utf8');
 // test seam: surface the IIFE's internals without loosening them in the shipped file
 __src=__src.replace(/\}\)\(\);\s*$/,
-  'window.__T={WEAPONS,MOVES,VECTOR,ACT,Artist,WEIGHT_FRICTION,CURVE_SWEEP,AKAAL_COLORS,INCH_TO_PIXEL_SCALE,DIFFICULTY};\n})();');
+  'window.__T={WEAPONS,MOVES,VECTOR,ACT,Artist,WEIGHT_FRICTION,CURVE_SWEEP,AKAAL_COLORS,INCH_TO_PIXEL_SCALE,DIFFICULTY,HITSTOP,ABILITY,KEYS};\n})();');
 eval(__src);
 handlers['DOMContentLoaded']();
-const {WEAPONS,MOVES,VECTOR,ACT,Artist,WEIGHT_FRICTION,CURVE_SWEEP,AKAAL_COLORS,INCH_TO_PIXEL_SCALE,DIFFICULTY}=window.__T;
+const {WEAPONS,MOVES,VECTOR,ACT,Artist,WEIGHT_FRICTION,CURVE_SWEEP,AKAAL_COLORS,INCH_TO_PIXEL_SCALE,DIFFICULTY,HITSTOP,ABILITY,KEYS}=window.__T;
 const g=window.GATKA;
 let fails=0;
 const check=(n,c,x='')=>{console.log((c?'  PASS  ':'* FAIL *')+' '+n+(x?'  ['+x+']':''));if(!c)fails++;};
@@ -444,5 +444,55 @@ console.log(String.fromCharCode(10)+(fails?fails+' FAILING':'ALL PASS'));
   check('drive inside the deadzone holds nothing (Mid stance)', H() === '', 'held={' + H() + '}');
   g._applyDrive(40, 0); g._releaseDrive();
   check('releasing the drive clears every held key', H() === '', 'held={' + H() + '}');
+}
+console.log(String.fromCharCode(10)+(fails?fails+' FAILING':'ALL PASS'));
+
+// ---- 16. HIT-STOP is capped so a strike never freezes/blocks input for long ----
+// The loop skips the whole sim (input included) while freezeT>0, so an over-long
+// hit-stop is the "buttons don't work when I strike" hang. Any freeze must clamp
+// to HITSTOP.max (desktop) / mobileMax (LOW_PERF) within a single frame.
+{
+  g.playerWeaponId='kirpan'; g._startMatch(true);
+  window.__GATKA_LOWPERF__ = false; g._bindTouch();     // desktop cap
+  g.last = 0; g.acc = 0; g.freezeT = 0.5;               // absurdly long freeze request
+  g._frame(16);                                         // one ~16ms frame
+  check('hit-stop clamps to HITSTOP.max on desktop (no long input-block)',
+        g.freezeT <= HITSTOP.max + 1e-9, 'freezeT=' + g.freezeT.toFixed(3) + ' cap=' + HITSTOP.max);
+
+  window.__GATKA_LOWPERF__ = true; g._bindTouch();      // mobile: tighter cap
+  g.last = 0; g.acc = 0; g.freezeT = 0.5;
+  g._frame(16);
+  check('hit-stop clamps to HITSTOP.mobileMax on LOW_PERF (phones stay responsive)',
+        g.freezeT <= HITSTOP.mobileMax + 1e-9, 'freezeT=' + g.freezeT.toFixed(3) + ' cap=' + HITSTOP.mobileMax);
+  window.__GATKA_LOWPERF__ = false; g._bindTouch();
+}
+console.log(String.fromCharCode(10)+(fails?fails+' FAILING':'ALL PASS'));
+
+// ---- 17. SMART ability button picks the right Simran ability (one tap, no tray) ----
+{
+  g.playerWeaponId='kirpan'; g._startMatch(true);
+  const p = g.player, e = g.enemy;
+  const noThreat = () => { e.ultActive = false; e.action = ACT.IDLE; e.attackPhase = null;
+                           g.projectiles.length = 0; p.shieldT = 0; };
+
+  noThreat(); p.simran = 0;
+  check('smart ability: empty meter → nothing castable (null)', g._smartAbility() === null,
+        'got ' + g._smartAbility());
+  noThreat(); p.simran = ABILITY.chakram.cost;
+  check('smart ability: Chakram affordable, no threat → Chakram (u)',
+        g._smartAbility() === KEYS.chakram[0], 'got ' + g._smartAbility());
+  noThreat(); p.simran = ABILITY.ultimate.cost;
+  check('smart ability: full meter → Ultimate (o)',
+        g._smartAbility() === KEYS.ultimate[0], 'got ' + g._smartAbility());
+  noThreat(); p.simran = ABILITY.shield.cost; e.action = ACT.ATTACK; e.attackPhase = "active";
+  check('smart ability: under threat + Shield affordable → Shield (i)',
+        g._smartAbility() === KEYS.shield[0], 'got ' + g._smartAbility());
+
+  // The sync must run and reflect "castable" vs "none" without throwing.
+  let err = null;
+  try { noThreat(); p.simran = ABILITY.ultimate.cost; g._syncSmartButton();
+        p.simran = 0; g._syncSmartButton(); } catch (ex) { err = ex; }
+  check('_syncSmartButton updates the button without throwing', !err,
+        err ? String(err).slice(0, 90) : 'ran for full + empty meter');
 }
 console.log(String.fromCharCode(10)+(fails?fails+' FAILING':'ALL PASS'));
