@@ -358,3 +358,21 @@ console.log(String.fromCharCode(10)+(fails?fails+' FAILING':'ALL PASS'));
         'enemy skill='+g.enemy.skill.toFixed(3)+' expected '+((4-1)/D.skillLevels).toFixed(3));
 }
 console.log(String.fromCharCode(10)+(fails?fails+' FAILING':'ALL PASS'));
+
+// ---- 13. Mobile perf: the LOW_PERF render path (halved trail) is sound --------
+{
+  // Force low-power mode and re-derive it (`_bindTouch` reads the flag), then run a
+  // few seconds of real combat + render — the halved-sample trail must not throw.
+  window.__GATKA_LOWPERF__ = true;
+  g._bindTouch();
+  let err=null;
+  try {
+    g.playerWeaponId='soti'; g._startMatch(true);
+    for(let i=0;i<40;i++) g._update(1/60);
+    g._render();
+  } catch(e){ err=e; }
+  check('LOW_PERF render path (halved blade trail) runs a match without throwing',
+        !err, err?String(err).slice(0,90):'40 sim steps + render, low-power on');
+  window.__GATKA_LOWPERF__ = false; g._bindTouch();
+}
+console.log(String.fromCharCode(10)+(fails?fails+' FAILING':'ALL PASS'));

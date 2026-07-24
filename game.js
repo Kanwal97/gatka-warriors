@@ -207,6 +207,11 @@ const WEIGHT_FRICTION = Object.freeze({ balanced: 0.91, forward_heavy: 0.96 });
 // Straight weapons keep the tight point-strike box.
 const CURVE_SWEEP = 0.10;
 
+// LOW-POWER MODE. Set true on coarse pointers (phones) at init, so the render path
+// can shed cost the small screen will never miss — right now it halves the blade
+// trail's sample count. The Game sets it in _bindTouch; drawWarrior reads it.
+let LOW_PERF = false;
+
 // ---- MOVE DATA (the 12 named Gatka moves) -----------------------------------
 // Each weapon exposes 4 moves via input slots: jUp / jMid / jDown (strikes) and
 // guard (+ optional guardUp). Data-driven — see docs/COMBAT-SYSTEM.md §3/§6.
@@ -968,7 +973,8 @@ const Artist = {
       const tipX = shoulderX + armLen * ATTHHA.cx;
       const back = f.weaponAngVel > 0 ? -1 : 1;               // smear BEHIND the travel
       // Sample the exact arc the tip just travelled, HEAD (tip, i=0) → TAIL.
-      const N = 24;
+      // Half the samples on a phone: the whirl still reads, at half the stroke cost.
+      const N = LOW_PERF ? 12 : 24;
       const pts = [];
       for (let i = 0; i <= N; i++) {
         const u = armAngle + back * (i / N) * span;
@@ -2961,7 +2967,10 @@ class Game {
     this._resize();
     window.addEventListener("resize", () => this._resize());
     window.addEventListener("orientationchange", () => this._resize());
-    requestAnimationFrame(this._frame.bind(this));
+    // Bind the loop ONCE and reuse it — re-binding every frame allocated a fresh
+    // closure 60×/s (needless GC churn on phones).
+    this._frameBound = this._frame.bind(this);
+    requestAnimationFrame(this._frameBound);
   }
 
   /**
@@ -2983,7 +2992,9 @@ class Game {
     const rect = c.getBoundingClientRect ? c.getBoundingClientRect() : null;
     const cssW = (rect && rect.width)  || CANVAS_W;
     const cssH = (rect && rect.height) || CANVAS_H;
-    const dpr = window.devicePixelRatio || 1;
+    // Cap the pixel ratio at 2: a DPR-3/4 phone would otherwise render a 3–4×
+    // backing store (fill-rate bound = jank) for sharpness no small screen shows.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = Math.max(1, Math.round(cssW * dpr));
     const h = Math.max(1, Math.round(cssH * dpr));
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
@@ -3045,9 +3056,36 @@ class Game {
     this._isTouch = !!window.__GATKA_TOUCH__ ||
       !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
       (typeof navigator !== "undefined" && navigator.maxTouchPoints > 0);
+    // Real touch devices get low-power FX (halved trail). `__GATKA_LOWPERF__`
+    // forces it on for testing on any machine.
+    LOW_PERF = !!window.__GATKA_LOWPERF__ || this._isTouch;
+
+    // ABILITIES TRAY — the ✦ toggle reveals the three Simran abilities, which now
+    // live in a pop-up instead of three always-on buttons. Pure UI (no game key);
+    // it auto-collapses after an ability fires so it never blocks the view.
+    const tray   = document.getElementById("ability-tray");
+    const toggle = document.getElementById("ability-toggle");
+    const closeTray = () => {
+      if (!tray) return;
+      tray.classList.remove("open");
+      if (toggle) {
+        toggle.classList.remove("on");
+        if (toggle.setAttribute) toggle.setAttribute("aria-expanded", "false");
+      }
+    };
+    if (toggle && tray) {
+      toggle.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        const open = tray.classList.toggle("open");
+        toggle.classList.toggle("on", open);
+        if (toggle.setAttribute) toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    }
 
     root.querySelectorAll("[data-key]").forEach((btn) => {
       const key = btn.dataset.key;
+      // Ability buttons sit inside the tray; tapping one collapses it again.
+      const inTray = !!(tray && typeof tray.contains === "function" && tray.contains(btn));
       const down = (e) => {
         e.preventDefault();
         if (btn.setPointerCapture) btn.setPointerCapture(e.pointerId);
@@ -3056,6 +3094,7 @@ class Game {
       const up = (e) => {
         e.preventDefault();
         this.input.release(key); btn.classList.remove("on");
+        if (inTray) closeTray();
       };
       btn.addEventListener("pointerdown", down);
       btn.addEventListener("pointerup", up);
@@ -3320,7 +3359,16 @@ class Game {
       // Re-check the force flag here, so toggling __GATKA_TOUCH__ in the console
       // takes effect on the next screen rather than needing a reload.
       const touch = this._isTouch || !!window.__GATKA_TOUCH__;
-      this.dom.touch.classList.toggle("hidden", !touch || s !== STATE.GAMEPLAY);
+      const show = touch && s === STATE.GAMEPLAY;
+      this.dom.touch.classList.toggle("hidden", !show);
+      // Collapse the abilities tray whenever the pad hides, so it never comes back
+      // open on the next round.
+      if (!show) {
+        const tray = document.getElementById("ability-tray");
+        const toggle = document.getElementById("ability-toggle");
+        if (tray) tray.classList.remove("open");
+        if (toggle) toggle.classList.remove("on");
+      }
     }
   }
 
@@ -3484,7 +3532,7 @@ class Game {
     }
 
     this._render();
-    requestAnimationFrame(this._frame.bind(this));
+    requestAnimationFrame(this._frameBound);
   }
 
   /* ---- SIMULATION STEP (state-dependent) ------------------------------ */

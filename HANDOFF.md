@@ -104,6 +104,22 @@ two-handed with no shield** (`twoHanded: true`; off-hand drawn on the hilt). Res
 panthra is "flowing, non-stop movement with no preset moves"; sword+shield is the
 Gatka pairing; khanda is clasped two-handed (SikhiWiki / gatkaa.com / ismaa.net).
 
+## Mobile performance + fewer buttons (2026-07-24)
+
+Users reported lag on touch and too many buttons. Fixed:
+- **Removed `backdrop-filter: blur`** from `.tkey` (×11), `.hud-btn`, `.overlay` — the
+  main mobile GPU jank (blurring the live canvas behind every button each frame).
+- **DPR capped at 2** in `_resize`; **rAF bound once** (`_frameBound`); **`LOW_PERF`**
+  module flag (true on coarse pointers via `_bindTouch`, or `__GATKA_LOWPERF__`)
+  halves the blade-trail sample count (12 vs 24) in `drawWarrior`.
+- **Abilities tray:** the 3 Simran abilities moved behind one `✦` toggle
+  (`#ability-toggle` → `#ability-tray.open`), auto-collapsing after use / when the pad
+  hides. Persistent touch keys 11 → ~8; each keeps its `data-key` so combat is
+  unchanged. Bigger core buttons on coarse pointers. Guarded by verify.js §13.
+- Desktop + keyboard paths untouched. See docs/ARCHITECTURE.md "Mobile performance".
+
+## Weapon-motion smooth & refine
+
 **Smooth & refine sub-pass:** the whirl now RIDES THE BEAT —
 `rate = whirl·(1 + swing·cos(beatPhase·2π))` in `_integrateWeapon`, so it surges on
 the nagara and eases mid-beat (per-weapon `motion.swing`: soti 0.25 / kirpan 0.35 /

@@ -122,6 +122,26 @@ weapon to `WEAPONS` therefore draws it with no edit here:
 
 Shared props: `drawDhal` (drawn only when `weapon.hasShield`), `drawDumalla`.
 
+## Mobile performance
+
+Phones lagged badly, from a few avoidable costs — all now addressed:
+
+- **No `backdrop-filter: blur`.** The 11 touch buttons + HUD toggles + overlay each
+  re-composited the animating canvas behind them every frame (the dominant jank).
+  They use opaque-enough fills instead ([index.html](../index.html)).
+- **DPR is capped at 2** in `Game._resize` — a DPR-3/4 phone no longer renders a
+  3–4× backing store for sharpness a small screen can't show.
+- **`LOW_PERF`** (module flag, set true on coarse pointers in `_bindTouch`) sheds FX
+  the phone won't miss: the blade trail samples **12 segments instead of 24**. The
+  `__GATKA_LOWPERF__` global forces it on for testing.
+- The rAF loop is **bound once** (`this._frameBound`), not re-bound every frame.
+
+**Touch controls** are trimmed to fewer buttons: the three Simran abilities live in a
+pop-up **tray** behind one `✦` toggle (wired in `_bindTouch`; auto-collapses after an
+ability fires and whenever the pad hides), so the pad shows ~8 persistent keys, not 11.
+Each tray button keeps its `data-key`, so `InputManager` and every combat rule are
+unchanged. Guarded by `tests/verify.js` §13 (LOW_PERF render path).
+
 ## Testing: headless harness
 
 `game.js` runs under Node with a stubbed environment. Pattern:

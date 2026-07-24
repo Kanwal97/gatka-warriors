@@ -75,8 +75,8 @@
     width: 34px; height: 34px; border-radius: 9px;
     display: flex; align-items: center; justify-content: center;
     font-size: 15px; line-height: 1; cursor: pointer;
-    background: rgba(20, 12, 5, 0.55); border: 1.5px solid var(--saffron-dim);
-    color: var(--gold); backdrop-filter: blur(2px);
+    background: rgba(20, 12, 5, 0.72); border: 1.5px solid var(--saffron-dim);
+    color: var(--gold);   /* no backdrop-filter: blur composites every frame = mobile jank */
     transition: border-color 0.12s ease, opacity 0.12s ease, background 0.12s ease;
     opacity: 0.6;
   }
@@ -185,12 +185,13 @@
     font-family: "Cinzel", serif; font-size: 11px; font-weight: 700;
     letter-spacing: 0.5px; line-height: 1;
     color: var(--gold);
-    background: rgba(20, 12, 5, 0.5);
+    background: rgba(20, 12, 5, 0.7);
     border: 1.5px solid var(--saffron-dim);
     border-radius: 12px;
     width: 52px; height: 52px;
     display: flex; align-items: center; justify-content: center;
-    backdrop-filter: blur(2px);
+    /* No backdrop-filter: blurring the live canvas behind 11 buttons every frame
+       is the main mobile jank source. A more opaque fill reads just as well. */
     transition: background 0.06s linear, transform 0.06s linear;
   }
   .tkey.on {
@@ -205,19 +206,31 @@
   .tpad .k-down  { grid-area: 2 / 2; }
   .tpad .k-right { grid-area: 2 / 3; }
   .tpad .k-jump  { grid-area: 1 / 3; }
-  /* right cluster: J/K under the thumb, abilities above — mirrors the keyboard */
-  .tacts { grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(2, 52px); }
-  .tacts .k-ult    { grid-area: 1 / 1; }
-  .tacts .k-shield { grid-area: 1 / 2; }
-  .tacts .k-chak   { grid-area: 1 / 3; }
+  /* right cluster: STEP/GUARD/STRIKE under the thumb, the ✦ abilities toggle above
+     STRIKE. The three abilities themselves live in a pop-up tray, not the grid. */
+  .tacts { position: relative; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(2, 52px); }
+  .tacts .k-abil   { grid-area: 1 / 3; }
   .tacts .k-dodge  { grid-area: 2 / 1; }
   .tacts .k-guard  { grid-area: 2 / 2; }
   .tacts .k-strike { grid-area: 2 / 3; }
-  .tkey.k-strike { background: rgba(192, 57, 43, 0.45); border-color: var(--blood); }
-  .tkey.k-guard  { background: rgba(42, 111, 79, 0.45); border-color: #2a6f4f; }
+  .tkey.k-strike { background: rgba(192, 57, 43, 0.6); border-color: var(--blood); }
+  .tkey.k-guard  { background: rgba(42, 111, 79, 0.6); border-color: #2a6f4f; }
   /* The step is the art's FIRST answer, not a footnote — colour it like the
      EVADE! it produces, and put it under the thumb beside GUARD. */
-  .tkey.k-dodge  { background: rgba(123, 224, 166, 0.38); border-color: #7be0a6; color: #d8fff0; }
+  .tkey.k-dodge  { background: rgba(123, 224, 166, 0.5); border-color: #7be0a6; color: #d8fff0; }
+  /* The ✦ toggle for the abilities tray. */
+  .tkey.k-abil   { background: rgba(138, 90, 21, 0.7); border-color: var(--gold); color: var(--gold); font-size: 20px; }
+  .tkey.k-abil.on { background: rgba(255, 157, 46, 0.6); color: var(--bg-0); }
+  /* ABILITIES TRAY — pops up above the cluster, right-aligned, stacked; hidden
+     until the ✦ is tapped, and auto-collapses after an ability fires (see game.js). */
+  .ability-tray {
+    position: absolute; right: 0; bottom: calc(100% + 8px);
+    display: none; flex-direction: column; gap: 6px;
+  }
+  .ability-tray.open { display: flex; }
+  .tkey.k-chak   { background: rgba(60, 90, 140, 0.72); border-color: #8fb4e3; }
+  .tkey.k-shield { background: rgba(42, 111, 79, 0.72); border-color: #2a6f4f; }
+  .tkey.k-ult    { background: rgba(138, 90, 21, 0.72); border-color: var(--gold); }
 
   /* ============================================================
      GENERIC OVERLAY (menus sit on top of the canvas)
@@ -238,8 +251,9 @@
     text-align: center;
     overflow-y: auto;                       /* the overlay itself can scroll to any button */
     -webkit-overflow-scrolling: touch;
-    background: linear-gradient(180deg, rgba(10, 6, 2, 0.86), rgba(10, 6, 2, 0.94));
-    backdrop-filter: blur(2px);
+    /* Opaque gradient instead of a backdrop blur — the blur re-composites the
+       animating canvas behind the menu every frame for no real readability gain. */
+    background: linear-gradient(180deg, rgba(10, 6, 2, 0.92), rgba(10, 6, 2, 0.96));
     z-index: 10;
   }
   .overlay.hidden { display: none; }
@@ -559,6 +573,9 @@
     #mute        { top: calc(10px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); }
     #tpad-toggle { top: calc(10px + env(safe-area-inset-top)); right: calc(52px + env(safe-area-inset-right)); }
     #pause-btn   { top: calc(10px + env(safe-area-inset-top)); right: calc(92px + env(safe-area-inset-right)); }
+    /* Bigger tap targets on a real touch screen (fewer, larger buttons). */
+    .tpad, .tacts { grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(2, 58px); }
+    .tkey { width: 58px; height: 58px; font-size: 11.5px; }
   }
 </style>
 </head>
@@ -594,9 +611,17 @@
         <button class="tkey k-right" data-key="d" aria-label="Move right">&rarr;</button>
       </div>
       <div class="cluster tacts">
-        <button class="tkey k-ult"    data-key="o" aria-label="Ultimate">ULT</button>
-        <button class="tkey k-shield" data-key="i" aria-label="Iron Shield">SHLD</button>
-        <button class="tkey k-chak"   data-key="u" aria-label="Chakram Storm">CHAK</button>
+        <!-- ABILITIES TRAY — the three Simran abilities used to sit here as three
+             always-on buttons; players found the pad crowded. They now live behind
+             one ✦ toggle and pop up only when wanted. Each keeps its data-key, so
+             InputManager (and every combat rule) is completely unchanged. -->
+        <div class="ability-tray" id="ability-tray">
+          <button class="tkey k-chak"   data-key="u" aria-label="Chakram Storm">CHAK</button>
+          <button class="tkey k-shield" data-key="i" aria-label="Iron Shield">SHLD</button>
+          <button class="tkey k-ult"    data-key="o" aria-label="Ultimate">ULT</button>
+        </div>
+        <button class="tkey k-abil" id="ability-toggle" aria-label="Abilities"
+                aria-expanded="false" aria-controls="ability-tray">&#10022;</button>
         <button class="tkey k-dodge"  data-key="Shift" aria-label="Pentra side-step (dodge)">STEP</button>
         <button class="tkey k-guard"  data-key="k" aria-label="Guard">GUARD</button>
         <button class="tkey k-strike" data-key="j" aria-label="Strike">STRIKE</button>
