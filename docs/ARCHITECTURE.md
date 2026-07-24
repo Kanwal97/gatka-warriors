@@ -150,6 +150,20 @@ unchanged. Keys are large (64px on touch), with **instant press feedback** via `
 *and* a `:active` CSS fallback (never waits on the game loop). Guarded by
 `tests/verify.js` §13 (LOW_PERF render path).
 
+### The DRIVE joystick ("drive hand")
+
+The most-tapped input — movement + High/Low stance — is a **floating joystick** on
+touch instead of a 4-button D-pad. Dragging the left thumb HOLDS the same keys the
+D-pad and keyboard emit — `a`/`d` (move) and `w`/`s` (High/Low stance) — via a pure
+mapping `Game._applyDrive(dx, dy)` (deadzone/clamp from the `DRIVE` config), so the
+joystick is **just another input source; combat is byte-for-byte identical**. `_bindDrive`
+floats the ring to the thumb (`#drive` zone, left half), clamps the nub to
+`DRIVE.maxRadius`, and `_releaseDrive` drops every held key on lift / mode-switch /
+round-end. A top-left `🕹️/⊞` toggle switches DRIVE ⇄ classic D-pad (default DRIVE on
+touch, persisted in `localStorage`); the `.drive-mode` class on `#touch` shows the
+matching control. Right thumb still taps Strike/Guard/Step (+ Jump, ✦). Guarded by
+`tests/verify.js` §15 (the mapping produces the same held keys as the buttons).
+
 ## The vaar swing (strike animation)
 
 A strike is **not** "ease the blade to a pose and hold" — that read as the blade

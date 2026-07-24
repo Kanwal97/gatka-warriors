@@ -87,6 +87,7 @@
   #mute        { right: 12px; }
   #tpad-toggle { right: 52px; }
   #pause-btn   { right: 92px; }
+  #drive-toggle { left: 12px; }   /* control-style toggle, top-LEFT corner */
   .hud-btn.hidden { display: none; }
 
   /* PAUSE + GUIDE share one rule: everything is pinned EXCEPT the guide, which
@@ -218,7 +219,10 @@
   .tpad .k-up, .tpad .k-down, .tpad .k-left, .tpad .k-right { font-size: 24px; }
   /* right cluster: STEP/GUARD/STRIKE under the thumb, the ✦ abilities toggle above
      STRIKE. The three abilities themselves live in a pop-up tray, not the grid. */
-  .tacts { position: relative; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(2, 56px); }
+  /* margin-left:auto keeps the action cluster hard RIGHT even in drive-mode, when
+     the .tpad (its space-between partner) is hidden. */
+  .tacts { position: relative; margin-left: auto; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(2, 56px); }
+  .tacts .k-jump   { grid-area: 1 / 1; }   /* jump lives on the right in BOTH schemes */
   .tacts .k-abil   { grid-area: 1 / 3; }
   .tacts .k-dodge  { grid-area: 2 / 1; }
   .tacts .k-guard  { grid-area: 2 / 2; }
@@ -245,6 +249,38 @@
   .tkey.k-chak   { background: rgba(60, 90, 140, 0.72); border-color: #8fb4e3; }
   .tkey.k-shield { background: rgba(42, 111, 79, 0.72); border-color: #2a6f4f; }
   .tkey.k-ult    { background: rgba(138, 90, 21, 0.72); border-color: var(--gold); }
+
+  /* ============================================================
+     DRIVE JOYSTICK ("drive hand") — steer with the left thumb
+     ------------------------------------------------------------
+     A floating stick: touch anywhere in the left zone and the ring appears there;
+     drag to hold a/d (move) and w/s (High/Low stance). It only feeds InputManager,
+     so it is just another way to press the same keys. Shown in `.drive-mode`; the
+     `.tpad` D-pad is the fallback for the other mode.
+     ============================================================ */
+  .drive {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 55%;
+    pointer-events: auto; touch-action: none; display: none;
+  }
+  #touch.drive-mode .drive { display: block; }
+  #touch.drive-mode .tpad  { display: none; }
+  .drive-base {
+    position: absolute; width: 116px; height: 116px; margin: -58px 0 0 -58px;
+    border-radius: 50%; pointer-events: none;
+    border: 2px solid rgba(255, 212, 121, 0.5);
+    background: radial-gradient(circle, rgba(20, 12, 5, 0.5), rgba(20, 12, 5, 0.12));
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+    opacity: 0; transition: opacity 0.1s linear;
+  }
+  .drive-base.active { opacity: 1; }
+  .drive-nub {
+    position: absolute; left: 50%; top: 50%; width: 56px; height: 56px;
+    margin: -28px 0 0 -28px; border-radius: 50%;
+    background: linear-gradient(180deg, var(--gold), var(--saffron));
+    border: 2px solid var(--gold);
+    box-shadow: 0 2px 10px rgba(255, 157, 46, 0.55);
+    /* JS sets transform: translate(dx, dy) as the thumb drags. */
+  }
 
   /* ============================================================
      GENERIC OVERLAY (menus sit on top of the canvas)
@@ -587,6 +623,7 @@
     #mute        { top: calc(10px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); }
     #tpad-toggle { top: calc(10px + env(safe-area-inset-top)); right: calc(52px + env(safe-area-inset-right)); }
     #pause-btn   { top: calc(10px + env(safe-area-inset-top)); right: calc(92px + env(safe-area-inset-right)); }
+    #drive-toggle { top: calc(10px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); }
     /* Bigger tap targets on a real touch screen — large, generous keys register
        reliably (research: >=48px; these are 64px) and are easy to hit under a thumb. */
     .tpad, .tacts { grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 64px); gap: 9px; }
@@ -612,16 +649,26 @@
          even an Esc key to reach for. Only shown while a round is running. -->
     <button id="pause-btn" class="hud-btn hidden" aria-label="Pause"
             title="Pause (Esc)">&#9208;</button>
+    <!-- Control-style toggle (top-LEFT, away from the right-side toggles): switch
+         between the DRIVE joystick (default on touch) and the classic D-pad. -->
+    <button id="drive-toggle" class="hud-btn" aria-label="Toggle drive/D-pad controls"
+            aria-pressed="true" title="Controls: Drive joystick / D-pad">&#128377;&#65039;</button>
 
     <!-- ============================================================
          TOUCH CONTROLS — shown only on coarse pointers, during a round.
          data-key values are the SAME keys the keyboard emits, so they feed
          InputManager.press/release and every combat rule stays shared.
          ============================================================ -->
-    <div id="touch" class="touch hidden">
+    <div id="touch" class="touch hidden drive-mode">
+      <!-- DRIVE JOYSTICK ("drive hand") — floating: it appears wherever the left
+           thumb lands. Dragging DRIVES the SAME keys the D-pad emits (←/→ = move via
+           a/d, ↑/↓ = High/Low stance via w/s), so combat is byte-for-byte identical.
+           Shown only in drive-mode; the .tpad below is the classic-D-pad fallback. -->
+      <div id="drive" class="drive" aria-label="Movement joystick — drag to move and set stance">
+        <div class="drive-base" id="drive-base"><div class="drive-nub"></div></div>
+      </div>
       <div class="cluster tpad">
         <button class="tkey k-up"    data-key="w" aria-label="High vector">&uarr;</button>
-        <button class="tkey k-jump"  data-key=" " aria-label="Jump">JUMP</button>
         <button class="tkey k-left"  data-key="a" aria-label="Move left">&larr;</button>
         <button class="tkey k-down"  data-key="s" aria-label="Low vector">&darr;</button>
         <button class="tkey k-right" data-key="d" aria-label="Move right">&rarr;</button>
@@ -636,6 +683,7 @@
           <button class="tkey k-shield" data-key="i" aria-label="Iron Shield">SHLD</button>
           <button class="tkey k-ult"    data-key="o" aria-label="Ultimate">ULT</button>
         </div>
+        <button class="tkey k-jump"  data-key=" " aria-label="Jump">JUMP</button>
         <button class="tkey k-abil" id="ability-toggle" aria-label="Abilities"
                 aria-expanded="false" aria-controls="ability-tray">&#10022;</button>
         <button class="tkey k-dodge"  data-key="Shift" aria-label="Pentra side-step (dodge)">STEP</button>
